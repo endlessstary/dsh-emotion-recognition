@@ -1,0 +1,58 @@
+{
+  "name": "dsh-emotion-recognition",
+  "version": "0.1.4",
+  "description": "情绪记忆与主观心情（fork 自 xsy822/dsh-emotion-memory 0.1.4）：PAD 情绪场 + 带情感指纹的记忆 + 她自己的主观评分",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json",
+    "./client": "./client.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-plugins"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh": "*"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "emotion",
+    "pad",
+    "memory",
+    "affective-computing"
+  ],
+  "license": "MIT",
+  "files": [
+    "lib",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "dsh": ">=0.2.1-rc.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/endlessstary/dsh-emotion-recognition.git"
+  },
+  "homepage": "https://github.com/xsy822/dsh-emotion-memory#readme",
+  "author": "fork by 琉璃千忆的运维（上游作者 xiaoshiyan）",
+  "dependencies": {},
+  "optionalDependencies": {
+    "onnxruntime-node": "^1.31.1",
+    "@huggingface/transformers": "^4.3.2"
+  }
+}
