@@ -1,6 +1,6 @@
 {
   "name": "dsh-emotion-recognition",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "情绪记忆与主观心情（fork 自 xsy822/dsh-emotion-memory 0.1.4）：PAD 情绪场 + 带情感指纹的记忆 + 她自己的主观评分",
   "type": "module",
   "main": "lib/index.js",
@@ -48,7 +48,7 @@
     "type": "git",
     "url": "https://github.com/endlessstary/dsh-emotion-recognition.git"
   },
-  "homepage": "https://github.com/xsy822/dsh-emotion-memory#readme",
+  "homepage": "https://github.com/endlessstary/dsh-emotion-recognition#readme",
   "author": "fork by 琉璃千忆的运维（上游作者 xiaoshiyan）",
   "dependencies": {},
   "optionalDependencies": {

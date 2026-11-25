@@ -31,6 +31,8 @@ window.__ModuleLoader__.load({
 [data-em-sess][data-on]{border-color:rgba(90,140,255,.55);background:rgba(90,140,255,.10);}
 [data-em-bar]{height:6px;border-radius:3px;background:rgba(127,127,127,.18);overflow:hidden;}
 [data-em-fill]{height:100%;background:rgba(90,140,255,.72);}
+[data-em-fill][data-full]{filter:brightness(1.22) saturate(1.12);animation:em-glow 2.4s ease-in-out infinite;}
+@keyframes em-glow{0%,100%{box-shadow:0 0 6px rgba(120,160,255,.45);}50%{box-shadow:0 0 13px rgba(255,176,120,.62);}}
 [data-em-meta]{font-size:11px;opacity:.6;display:flex;gap:10px;flex-wrap:wrap;}
 [data-em-chip]{font-size:11px;padding:1px 7px;border-radius:99px;background:rgba(90,140,255,.14);}
 [data-em-input]{padding:6px 9px;border-radius:8px;border:1px solid rgba(127,127,127,.3);background:transparent;color:inherit;font-size:12px;}
@@ -92,6 +94,15 @@ window.__ModuleLoader__.load({
 
     // 生理状态词：她打了也不折算成情绪，只在界面上说明「暂不分析」。
     const 生理词 = ['累', '困', '饿', '乏', '倦', '疲惫', '困倦', '没精神', '熬夜', '撑不住', '酸痛', '头疼', '不舒服', '想睡']
+    // 情绪条的颜色：按 Plutchik 情绪轮的家族配色（joy 黄、anticipation 橙、trust 绿、surprise 青、
+    // sadness 蓝、disgust 紫、anger 红；serenity/apprehension 等变体取同族的浅/深色）。
+    const 情绪色 = {
+        喜悦: '#FFD700', 乐观: '#FF9A3C', 放松: '#F8E7B9', 惊讶: '#4fb3c9',
+        温和: '#D3C9BE', 依赖: '#EDB4C4', 无聊: '#9a9a9a', 悲伤: '#5b7fc4',
+        恐惧: '#000000', 焦虑: '#FFB11B', 轻蔑: '#9575CD', 厌恶: '#5E4FA2',
+        怨恨: '#a33c3c', 敌意: '#951322',
+    }
+    const 取色 = (词) => 情绪色[词] || 'rgba(90,140,255,.72)'
     // 她自己的词 → 14 个通道（2026-11-25 重写，按文献不再是拍脑袋的系数）。
     //
     // 依据一：Plutchik 情绪轮（1980/2001）的 8 个基本情绪 + 组合规则。
@@ -174,7 +185,6 @@ window.__ModuleLoader__.load({
       // 不归一：情绪各自独立，加起来不必是 100%。折算值 ×10 就是百分比（可能超过 100，那是真的强）。
       const 强度 = (词) => Math.round((折算后[词] || 0) * 10)
       const 排序 = 通道.slice().sort((a, b) => (折算后[b] || 0) - (折算后[a] || 0))
-      const 最大强度 = Math.max(1, ...排序.map((词) => 强度(词)))
       const 合计 = 她词.reduce((a, 词) => a + Number(她分[词]), 0)
       const 生理分 = 她词.filter((词) => 生理词.includes(词))
       const 生理提示 = 生理分.length
@@ -191,14 +201,14 @@ window.__ModuleLoader__.load({
             : ''),
           生理提示 ? h('div', { 'data-em-note': '' }, 生理提示) : null),
         h('div', { 'data-em-sec': '' },
-          h('div', { 'data-em-h': '' }, '14 个通道 —— 主观评分分析'),
+          h('div', { 'data-em-h': '' }, '14 项情绪 —— 主观评分分析'),
           ...(排序.length
             ? 排序.map((词) => {
               const v = 强度(词)
               return h('div', { key: 词, style: { display: 'flex', flexDirection: 'column', gap: 3 } },
                 h('div', { 'data-em-row': '' }, h('span', {}, 词), h('span', {}, v + '%')),
                 h('div', { 'data-em-bar': '' },
-                  h('div', { 'data-em-fill': '', style: { width: Math.max(1, Math.round(v / 最大强度 * 100)) + '%' } })))
+                  h('div', { 'data-em-fill': '', 'data-full': v >= 100 ? '' : undefined, style: { width: Math.max(1, Math.min(100, v)) + '%', background: v >= 100 ? 取色(词) : 'rgba(90,140,255,.72)' } })))
             })
             : [h('div', { 'data-em-note': '' }, '还没有状态')])))
       const 客观页 = h('div', {},
@@ -214,12 +224,12 @@ window.__ModuleLoader__.load({
             .map(([k, v]) => k + ' ' + Math.round(Number(v) * 100) + '%')
             .join('　') || '无'))),
         h('div', { 'data-em-sec': '' },
-          h('div', { 'data-em-h': '' }, '14 个通道 —— 系统客观评分'),
+          h('div', { 'data-em-h': '' }, '14 项情绪 —— 系统客观评分'),
           ...Object.entries((st && st.强度) || {}).sort((a, b) => b[1] - a[1]).map((pair) =>
             h('div', { key: pair[0], style: { display: 'flex', flexDirection: 'column', gap: 3 } },
               h('div', { 'data-em-row': '' }, h('span', {}, pair[0]), h('span', {}, Math.round(Number(pair[1]) * 100) + '%')),
               h('div', { 'data-em-bar': '' },
-                h('div', { 'data-em-fill': '', style: { width: Math.max(1, Math.round(Number(pair[1]) * 100)) + '%' } }))))))
+                h('div', { 'data-em-fill': '', 'data-full': Math.round(Number(pair[1]) * 100) >= 100 ? '' : undefined, style: { width: Math.max(1, Math.round(Number(pair[1]) * 100)) + '%', background: Math.round(Number(pair[1]) * 100) >= 100 ? 取色(pair[0]) : 'rgba(90,140,255,.72)' } }))))))
       return h('div', {},
         h('div', { 'data-em-seg': '' },
           h('button', { 'data-on': 面 === '主观' ? '' : undefined, onClick: () => set面('主观') }, '主观'),

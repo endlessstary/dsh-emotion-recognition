@@ -2,5 +2,7 @@ node_modules/
 dist/
 *.tgz
 *.log
+.state/
 state.json
 config.json
+.DS_Store
