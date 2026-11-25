@@ -30,7 +30,7 @@
 需要 DSH 0.2.1-rc.5 或 0.2.2-rc.x，Node ≥ 22。
 
 ```bash
-dsh plugin --profile <profile> add <本仓库发布会话里产出的 .tgz，或本地绝对路径>
+dsh plugin --profile <profile> add https://github.com/endlessstary/dsh-emotion-recognition/releases/download/v0.1.4/dsh-emotion-recognition-0.1.4.tgz
 ```
 
 装完重启 DSH。设置页左列会出现「情绪记忆」。
