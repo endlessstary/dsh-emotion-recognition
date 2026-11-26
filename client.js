@@ -18,7 +18,7 @@ window.__ModuleLoader__.load({
 [data-em-seg] > button{flex:1;padding:8px 12px;border:0;background:transparent;cursor:pointer;font-size:12px;color:inherit;}
 [data-em-seg] > button + button{border-left:1px solid rgba(127,127,127,.25);}
 [data-em-seg] > button[data-on]{background:rgba(90,140,255,.15);}
-[data-em-hero]{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:12px;background:rgba(127,127,127,.08);}
+[data-em-hero]{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:12px;background:rgba(127,127,127,.08);border:1px solid transparent;}
 [data-em-big]{font-size:22px;font-weight:600;}
 [data-em-sub]{font-size:12px;opacity:.72;line-height:1.7;}
 [data-em-sec]{display:flex;flex-direction:column;gap:8px;margin-top:20px;}
@@ -174,6 +174,65 @@ window.__ModuleLoader__.load({
         怨恨: '#a33c3c', 敌意: '#951322',
     }
     const 取色 = (词) => 情绪色[词] || 'rgba(90,140,255,.72)'
+    // 情绪条的颜色（2026-11-26 晚，岁岁要的）：平时一律淡蓝；到 80% 起显出自己那一族的颜色，
+    // 分数越高越亮（80% → 暗一点的本色，100% 及以上 → 最亮 + 原有的呼吸发光）。
+    const 条色 = (词, 百分) => {
+      const v = Math.max(0, Math.min(140, Number(百分) || 0))
+      if (v < 80) return { background: 'rgba(90,140,255,.72)' }
+      const t = Math.min(1, (v - 80) / 20)   // 80% → 0，100% 及以上 → 1
+      return {
+        background: 取色(词),
+        filter: 'brightness(' + (0.80 + t * 0.60).toFixed(2) + ') saturate(' + (0.90 + t * 0.35).toFixed(2) + ')',
+      }
+    }
+    // 卡片跟着变色（2026-11-26 晚，岁岁要的）：有情绪到 80% 时，卡片主体保持白，
+    // 右上角透出那一族的颜色、边沿一条细线；多条（最多取 3 条）由浅到深做渐变。
+    // 只变色，不发光、不呼吸（呼吸留给情绪条自己）。
+    const 半透明 = (色, a) => {
+      const s = String(色 || '').trim()
+      if (s.charAt(0) === '#') {
+        const h = s.slice(1)
+        const n = h.length === 3 ? h.split('').map((x) => x + x).join('') : h
+        const r = parseInt(n.slice(0, 2), 16) || 0
+        const g = parseInt(n.slice(2, 4), 16) || 0
+        const b = parseInt(n.slice(4, 6), 16) || 0
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')'
+      }
+      if (/^rgba?\(/.test(s)) return s.replace(/,\s*[\d.]+\)$/, ',' + a + ')')
+      return s
+    }
+    // 卡片右上角那片颜色：三个可调的数在设置页「卡片配色」里
+    //   卡面色浓度（0~0.8，默认 0.36）· 卡片椭圆大小（px，默认 300）· 卡片过渡软度（0~1，默认 0.5）
+    const 卡面 = (高们, 配 = {}) => {
+      const 用 = (高们 || []).slice(0, 3)   // 分数高的在前 = 最贴角落、最浓的那层
+      if (!用.length) return null
+      const 取数 = (v, 默, lo, hi) => (Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Number(v))) : 默)
+      const 浓 = 取数(配.卡面色浓度, 0.36, 0, 0.8)
+      const 大小 = 取数(配.卡片椭圆大小, 300, 60, 900)
+      const 软 = 取数(配.卡片过渡软度, 0.5, 0, 1)
+      const 比1 = 0.8 - 0.6 * 软   // 中间停靠点的不透明度比例：越软，中间越淡
+      const 比2 = 0.3 - 0.3 * 软
+      // 以右上角为圆心做椭圆：边界是一条向外凸的弧 —— 一眼看不出三角形，过渡也更自然。
+      // 分数越低的层，椭圆越大、越淡。
+      const 图 = 用.map(([词, v], i) => {
+        const t = Math.min(1, (Number(v) - 80) / 20)
+        const a = Math.min(浓, 浓 * (0.5 + t * 0.5)) * (1 - i * 0.2)
+        const 宽 = Math.round(大小 * (1 + i * 0.5))
+        const 高 = Math.round(大小 * 0.55 * (1 + i * 0.58))
+        const c = 取色(词)
+        return 'radial-gradient(ellipse ' + 宽 + 'px ' + 高 + 'px at 100% 0%, ' +
+          半透明(c, a.toFixed(2)) + ' 0%, ' +
+          半透明(c, (a * 比1).toFixed(2)) + ' 40%, ' +
+          半透明(c, (a * 比2).toFixed(2)) + ' 70%, ' +
+          半透明(c, 0) + ' 100%)'
+      })
+      const 主 = 用[0][0]
+      return {
+        backgroundColor: '#ffffff',
+        backgroundImage: 图.join(', '),
+        borderColor: 半透明(取色(主), 0.7),
+      }
+    }
     // 她自己的词 → 14 个通道（2026-11-25 重写，按文献不再是拍脑袋的系数）。
     //
     // 依据一：Plutchik 情绪轮（1980/2001）的 8 个基本情绪 + 组合规则。
@@ -274,13 +333,15 @@ window.__ModuleLoader__.load({
       // 不归一：情绪各自独立，加起来不必是 100%。折算值 ×10 就是百分比（可能超过 100，那是真的强）。
       const 强度 = (词) => Math.round((折算后[词] || 0) * 10)
       const 排序 = 通道.slice().sort((a, b) => (折算后[b] || 0) - (折算后[a] || 0))
+      // 到 80% 的情绪（给卡片变色用），分数高的在前
+      const 主观高们 = 排序.map((词) => [词, 强度(词)]).filter(([, v]) => v >= 80).sort((a, b) => b[1] - a[1])
       const 合计 = 她词.reduce((a, 词) => a + Number(她分[词]), 0)
       const 生理分 = 她词.filter((词) => 是生理(词, (st && st.词表) || {}))
       const 生理提示 = 生理分.length
         ? ('（' + 生理分.map((词) => 词 + ' ' + 她分[词]).join('、') + ' 属生理状态，暂不分析）')
         : ''
       const 主观页 = h('div', {},
-        h('div', { 'data-em-hero': '' },
+        h('div', { 'data-em-hero': '', style: 卡面(主观高们, st && st.配置) || undefined },
           h('div', { 'data-em-big': '' }, 她词.length ? String(她词[0]) : '还没打分'),
           h('div', { 'data-em-sub': '' }, 她词.length
             ? ('她自己的主观评分（0~10，各算各的）：' + 她词.map((词) => 词 + ' ' + 她分[词]).join(' / '))
@@ -298,11 +359,14 @@ window.__ModuleLoader__.load({
               return h('div', { key: 词, style: { display: 'flex', flexDirection: 'column', gap: 3 } },
                 h('div', { 'data-em-row': '' }, h('span', {}, 词), h('span', {}, v + '%')),
                 h('div', { 'data-em-bar': '' },
-                  h('div', { 'data-em-fill': '', 'data-full': v >= 100 ? '' : undefined, style: { width: (v <= 0 ? 0 : Math.max(1, Math.min(100, v))) + '%', background: v >= 100 ? 取色(词) : 'rgba(90,140,255,.72)' } })))
+                  h('div', { 'data-em-fill': '', 'data-full': v >= 100 ? '' : undefined, style: { width: (v <= 0 ? 0 : Math.max(1, Math.min(100, v))) + '%', ...条色(词, v) } })))
             })
             : [h('div', { 'data-em-note': '' }, '还没有状态')])))
+      const 客观条们 = Object.entries((st && st.强度) || {}).sort((a, b) => b[1] - a[1])
+      // 到 80% 的情绪（给卡片变色用），分数高的在前
+      const 客观高们 = 客观条们.map(([k, v]) => [k, Math.round(Number(v) * 100)]).filter(([, v]) => v >= 80).sort((a, b) => b[1] - a[1])
       const 客观页 = h('div', {},
-        h('div', { 'data-em-hero': '' },
+        h('div', { 'data-em-hero': '', style: 卡面(客观高们, st && st.配置) || undefined },
           h('div', { 'data-em-big': '' }, (混[0] && 混[0][0]) || '平常'),
           h('div', { 'data-em-sub': '' }, (st && st.行) || '还没有状态'),
           h('div', { 'data-em-sub': '' }, 混.length
@@ -316,11 +380,11 @@ window.__ModuleLoader__.load({
 
         h('div', { 'data-em-sec': '' },
           h('div', { 'data-em-h': '' }, '14 项情绪 —— 系统客观评分'),
-          ...Object.entries((st && st.强度) || {}).sort((a, b) => b[1] - a[1]).map((pair) =>
+          ...客观条们.map((pair) =>
             h('div', { key: pair[0], style: { display: 'flex', flexDirection: 'column', gap: 3 } },
               h('div', { 'data-em-row': '' }, h('span', {}, pair[0]), h('span', {}, Math.round(Number(pair[1]) * 100) + '%')),
               h('div', { 'data-em-bar': '' },
-                h('div', { 'data-em-fill': '', 'data-full': Math.round(Number(pair[1]) * 100) >= 100 ? '' : undefined, style: { width: (Math.round(Number(pair[1]) * 100) <= 0 ? 0 : Math.max(1, Math.round(Number(pair[1]) * 100))) + '%', background: Math.round(Number(pair[1]) * 100) >= 100 ? 取色(pair[0]) : 'rgba(90,140,255,.72)' } }))))))
+                h('div', { 'data-em-fill': '', 'data-full': Math.round(Number(pair[1]) * 100) >= 100 ? '' : undefined, style: { width: (Math.round(Number(pair[1]) * 100) <= 0 ? 0 : Math.max(1, Math.round(Number(pair[1]) * 100))) + '%', ...条色(pair[0], Math.round(Number(pair[1]) * 100)) } }))))))
       return h('div', {},
         h('div', { 'data-em-seg': '' },
           h('button', { 'data-on': 面 === '主观' ? '' : undefined, onClick: () => set面('主观') }, '主观'),
@@ -497,6 +561,12 @@ window.__ModuleLoader__.load({
           h(数字, { 键: '关系归档天', 名: '多久没说话才淡忘（天）', 值: 配.关系归档天, 步: 10, 存: 改, 说明: '超过这么多天、而且已经淡了的，标成淡忘（数据留着，再说一句话就回来）；主人永不被淡忘' }),
           h(数字, { 键: '关系归档强度', 名: '淡到什么程度才淡忘', 值: 配.关系归档强度, 存: 改, 说明: '离中性多近才算「已经淡了」；越小越严格' }),
           h(数字, { 键: '最多连续跳过', 名: '最多连着跳几轮', 值: 配.最多连续跳过, 步: 1, 存: 改, 说明: '连着跳过这么多轮后，下一轮一定判一次，免得心情飘太久没人管' })),
+        h('div', { 'data-em-sec': '' },
+          h('div', { 'data-em-h': '' }, '卡片配色'),
+          h('div', { 'data-em-note': '' }, '心情页顶部那张卡：有情绪到 80% 时会从右上角透出那一族的颜色。这三项只管卡片，不管情绪条本身。'),
+          h(数字, { 键: '卡面色浓度', 名: '颜色浓度（0~0.8）', 值: 配.卡面色浓度, 步: 0.02, 存: 改, 说明: '最深能到多浓；默认 0.36。太浓会压住上面的字' }),
+          h(数字, { 键: '卡片椭圆大小', 名: '角落光晕大小（px）', 值: 配.卡片椭圆大小, 步: 20, 存: 改, 说明: '右上角那片椭圆的宽度；默认 300。小 = 收得更紧，大 = 铺得更开' }),
+          h(数字, { 键: '卡片过渡软度', 名: '过渡软度（0~1）', 值: 配.卡片过渡软度, 步: 0.05, 存: 改, 说明: '0 = 边缘干脆、看得出弧形；1 = 化得很开、几乎没有边界；默认 0.5' })),
         h('div', { 'data-em-sec': '' },
           h('div', { 'data-em-h': '' }, '记忆设置'),
           h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
