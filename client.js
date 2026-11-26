@@ -86,12 +86,10 @@ window.__ModuleLoader__.load({
       const st = props.st || {}
       const 条 = st.关系 || []
       return h('div', { 'data-em-sec': '', style: { marginTop: 0 } },
-        h('div', { 'data-em-h': '' }, '关系账 —— 按人记'),
-        h('div', { 'data-em-note': '' }, '心情按会话（她此刻什么状态），关系按人（她对某个人的账，全局一份）。'
-          + '两根轴：亲近 和 敌视 各记各的 —— 亲近攒得慢、敌视涨得快（负面更扎心）；处得好敌视会慢慢退。'
-          + '开发场合也算关系的一部分（一起改插件、一起踩坑，也是「和岁岁处得怎么样」），所以默认全局一本账；'
-          + '真想让某个场合只记「在场」，把它填进 config.json 的 不记感情场合。'
-          + '这是判定分寸的参考，不是要她演。'),
+        h('div', { 'data-em-h': '' }, '关系列表'),
+        h('div', { 'data-em-note': '' }, '「关系」默认为全局模式。'),
+        h('div', { 'data-em-note': '' }, '「关系」分为三条轴，亲近、敌视与信任，前两轴之间的关联度可调，信任轴则完全独立。'),
+        h('div', { 'data-em-note': '' }, '此为判定分寸之参考，而非令大肥鱼演戏'),
         ...(条.length
           ? 条.map((r) => h('div', { key: r.名, style: { display: 'flex', flexDirection: 'column', gap: 3 } },
             h('div', { 'data-em-row': '' },
