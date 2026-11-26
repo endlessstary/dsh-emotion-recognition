@@ -33,7 +33,87 @@ window.__ModuleLoader__.load({
 [data-em-fill]{height:100%;background:rgba(90,140,255,.72);}
 [data-em-fill][data-full]{filter:brightness(1.22) saturate(1.12);animation:em-glow 2.4s ease-in-out infinite;}
 @keyframes em-glow{0%,100%{box-shadow:0 0 6px rgba(120,160,255,.45);}50%{box-shadow:0 0 13px rgba(255,176,120,.62);}}
-[data-em-meta]{font-size:11px;opacity:.6;display:flex;gap:10px;flex-wrap:wrap;}
+/* 关系三条轴：各自的"水色"，沿着条子慢慢流（2026-11-26） */
+[data-em-fill][data-axis]{background-size:200% 100%;background-position:0% 50%;animation:em-flow 7s linear infinite;}
+/* 亲近：0~70% 用「樱云粉 → 云水青 → 浅蓝 → 薄暮蓝」，71~100% 用「暖曦 → 橘粉 → 藕粉 → 雾蓝 → 碧霄」；
+   两档上面都飘一层白云（跟着水一起流）。 */
+[data-em-fill][data-axis="亲"]{
+  background-image:linear-gradient(90deg,#EEB6C6 0%,#F2C6D3 14%,#9FDCE1 42%,#B6D4EE 70%,#B6BEE6 100%);
+  /* 颜色层也跟着慢慢流：图比条子宽一倍，来回缓慢平移（反向交替，不会跳帧） */
+  background-size:200% 100%;background-repeat:no-repeat;background-position:100% 50%;
+  animation:em-drift 22s ease-in-out infinite alternate;position:relative;}
+[data-em-fill][data-axis="亲"][data-hot]{
+  background-image:linear-gradient(90deg,#F4BC8C 0%,#F7BE79 13%,#FBA187 26%,#FAA9B8 38%,#F9B3CD 50%,#E1DEEE 60%,#CFE3F6 72%,#A6D2EE 85%,#A6D2EE 100%);}
+@keyframes em-drift{from{background-position:100% 50%;}to{background-position:0% 50%;}}
+[data-em-wisp]{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit;
+  background-image:
+    radial-gradient(36px 130% at 30px 60%, rgba(255,255,255,.60) 0%, rgba(255,255,255,0) 70%),
+    radial-gradient(26px 110% at 120px 40%, rgba(255,255,255,.50) 0%, rgba(255,255,255,0) 72%),
+    radial-gradient(44px 150% at 210px 65%, rgba(255,255,255,.44) 0%, rgba(255,255,255,0) 70%);
+  background-size:260px 100%,260px 100%,260px 100%;background-repeat:repeat-x;
+  animation:em-wisp 11s linear infinite;}
+/* 水流方向：（从左往右）白云从 -260px 走回 0，敌/信 的渐变从 200% 走回 0 */
+@keyframes em-wisp{from{background-position:-260px 0,-260px 0,-260px 0;}to{background-position:0 0,0 0,0 0;}}
+/* 敌视：把轴平均分成六格，左浅右深（岁岁给的六色），格与格之间留一点过渡；
+   它没有「水流」——用暗色内影 + 极慢的内部涌动做「粘稠」感。 */
+[data-em-fill][data-axis="敌"]{
+  background-image:linear-gradient(90deg,
+    #B21F29 0%,#B21F29 13.2%,
+    #930510 20.2%,#930510 29.8%,
+    #72090F 36.8%,#72090F 46.5%,
+    #53080E 53.5%,#53080E 63.2%,
+    #3D0B0D 70.2%,#3D0B0D 79.8%,
+    #020101 86.8%,#020101 100%);
+  background-size:calc(10000% / var(--w, 100)) 100%;background-repeat:no-repeat;background-position:0 0;animation:none;position:relative;
+  /* 下垂感：上缘薄高光、下缘更重更宽的暗影，再加一点底部的投影 */
+  border-radius:5px 5px 7px 7px;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.20), inset 0 -3px 5px rgba(0,0,0,.46), 0 2px 3px rgba(0,0,0,.10);}
+/* 内部涌动：只做很轻的明暗起伏（以前那层把左边压暗了，浅色区现在不加暗层） */
+[data-em-goo]{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:.9;
+  background-image:
+    linear-gradient(90deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 28%, rgba(0,0,0,.08) 62%, rgba(0,0,0,.16) 100%),
+    radial-gradient(42% 160% at 30% 50%, rgba(255,255,255,.12) 0%, rgba(255,255,255,0) 70%);
+  background-size:100% 100%,180% 100%;background-repeat:no-repeat,repeat-x;
+  animation:em-goo 48s ease-in-out infinite alternate;}
+@keyframes em-goo{from{background-position:0 0,0 0;}to{background-position:0 0,-150px 0;}}
+/* 信任：0~100% 全用浅金系五格，左浅右深、格间过渡（不再贴图片纹理） */
+[data-em-fill][data-axis="信"]{
+  background-image:linear-gradient(90deg,
+    #F7E7C6 0%,#F7E7C6 17%,
+    #F3D9A4 23%,#F3D9A4 37%,
+    #EBCB86 43%,#EBCB86 57%,
+    #E5B967 63%,#E5B967 77%,
+    #D9A84A 83%,#D9A84A 100%);
+  background-size:calc(10000% / var(--w, 100)) 100%;background-repeat:no-repeat;background-position:0 0;animation:none;position:relative;}
+@keyframes em-flow{0%{background-position:200% 50%;}100%{background-position:0% 50%;}}
+/* 信任轴的「流动」：一道柔和的金光从左往右扫过（不动色带，所以格子位置不会乱） */
+[data-em-sheen]{position:absolute;inset:0;border-radius:inherit;pointer-events:none;mix-blend-mode:screen;
+  background-image:linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,252,236,.55) 45%, rgba(255,255,255,0) 62%);
+  background-size:200px 100%;background-repeat:no-repeat;
+  animation:em-sheen 6.5s linear infinite;}
+@keyframes em-sheen{from{background-position:-220px 0;}to{background-position:calc(100% + 220px) 0;}}
+@media (prefers-reduced-motion: reduce){[data-em-fill][data-axis]{animation:none;}[data-em-wisp]{animation:none;}}
+[data-em-bar="rel"]{height:10px;border-radius:5px;margin-bottom:0;overflow:visible;}
+[data-em-meta]{font-size:11px;display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;}
+[data-em-meta]>span{opacity:.6;}
+/* 名字外面那个直边小方框：**整块底色**按「是哪条轴在给名字上色」来填（亲灰 / 信近黑 / 敌米白），
+   里面的名字仍是那条轴的渐变字；字在框里居中。 */
+[data-em-meta]>[data-name-box]{opacity:1;display:inline-flex;align-items:center;justify-content:center;
+  padding:9px 9px;line-height:1;border:1px solid transparent;border-radius:8px;}
+[data-name-box="亲"]{background-color:#26231E;animation:em-edge-cool 9s ease-in-out infinite alternate;}
+[data-name-box="信"]{background-color:#26231E;animation:em-edge-gold 7s ease-in-out infinite alternate;}
+[data-name-box="敌"]{background-color:#FFFEF8;}
+[data-name-box=""]{background-color:rgba(127,127,127,.18);}
+/* 方框的边「呼吸」：亲在青蓝和樱粉之间，信在柔金和浅金之间；敌的边色跟着分数走，不动 */
+@keyframes em-edge-cool{from{border-color:#9FDCE1;}to{border-color:#F5C6D6;}}
+@keyframes em-edge-gold{from{border-color:#D9A84A;}to{border-color:#F7E7C6;}}
+/* 名字跟着最高的那条轴走：亲 / 信 用会流动的渐变字，敌 用解开的几格拼渐变 */
+[data-name]{display:inline-block;font-weight:600;background-size:200% 100%;background-position:0% 50%;
+  -webkit-background-clip:text;background-clip:text;padding:0;border:0;}
+[data-name="亲"]{background-image:linear-gradient(90deg,#EEB6C6,#9FDCE1,#B6BEE6);animation:em-drift 16s ease-in-out infinite alternate;color:transparent;}
+[data-name="亲"][data-hot]{background-image:linear-gradient(90deg,#F4BC8C,#FBA187,#F9B3CD,#CFE3F6,#A6D2EE);}
+[data-name="信"]{background-image:linear-gradient(90deg,#F7E7C6,#EBCB86,#D9A84A,#F7E7C6);animation:em-drift 14s ease-in-out infinite alternate;color:transparent;}
+[data-name="敌"]{background-image:none;}
 [data-em-chip]{font-size:11px;padding:1px 7px;border-radius:99px;background:rgba(90,140,255,.14);}
 [data-em-input]{padding:6px 9px;border-radius:8px;border:1px solid rgba(127,127,127,.3);background:transparent;color:inherit;font-size:12px;}
 [data-em-num]{width:88px;padding:4px 8px;border-radius:7px;border:1px solid rgba(127,127,127,.3);background:transparent;color:inherit;font-size:12px;text-align:right;}
@@ -85,22 +165,69 @@ window.__ModuleLoader__.load({
     function 关系页(props) {
       const st = props.st || {}
       const 条 = st.关系 || []
+      const 百分 = (v) => Math.round(Number(v) * 100)
+      // 名字的颜色跟着「最高的那条轴」走：亲/信 用渐变（会流动）；
+      // 敌 用「已经解开的那几格」拼成的渐变（52% = 前三格，25% = 前两格）。
+      const 敌档 = ['#B21F29', '#930510', '#72090F', '#53080E', '#3D0B0D', '#020101']
+      // 信任改用图片里的金液纹路（见 CSS），不再分档配色
+      const 敌名 = (v) => {
+        const n = Math.min(6, Math.max(1, Math.ceil(v / 100 * 6)))
+        if (n === 1) return { 'data-name': '敌', style: { color: 敌档[0], opacity: 1 } }
+        const 站 = 敌档.slice(0, n).map((c, i) => c + ' ' + Math.round(i / (n - 1) * 100) + '%').join(',')
+        return { 'data-name': '敌', style: { backgroundImage: 'linear-gradient(90deg,' + 站 + ')', color: 'transparent', opacity: 1 } }
+      }
+      const 信名 = () => ({ 'data-name': '信', style: { backgroundImage: 'linear-gradient(90deg,#F7E7C6,#EBCB86,#D9A84A)', color: 'transparent', opacity: 1 } })
+      const 最高轴 = (r) => {
+        const 组 = [['亲', 百分(r.亲)], ['敌', 百分(r.敌)], ['信', 百分(r.信)]]
+        组.sort((a, b) => b[1] - a[1])
+        return 组[0][1] > 0 ? 组[0] : ['', 0]
+      }
+      const 名字样式 = (r) => {
+        const [轴, 值] = 最高轴(r)
+        if (轴 === '敌') return 敌名(值)
+        if (轴 === '信') return 信名(值)
+        if (!轴) return {}
+        return { 'data-name': 轴, 'data-hot': 轴 === '亲' && 值 >= 71 ? '' : undefined }
+      }
+      // 方框：底色按轴（钛金灰 / 近黑 / 米白），四条边用名字那条轴的主色，四角圆、四边留白一样
+      const 框色 = { 亲: '#26231E', 信: '#26231E', 敌: '#FFFEF8' }
+      const 边色 = (轴, 值) => {
+        if (轴 === '信') return '#D9A84A'
+        if (轴 === '亲') return 值 >= 71 ? '#FBA187' : '#9FDCE1'
+        if (轴 === '敌') { const n = Math.min(6, Math.max(1, Math.ceil(值 / 100 * 6))); return 敌档[n - 1] }
+        return 'rgba(127,127,127,.5)'
+      }
+      const 名字盒 = (r) => {
+        const [轴, 值] = 最高轴(r)
+        return h('span', { 'data-name-box': 轴 || '', style: { backgroundColor: 框色[轴] || 'rgba(127,127,127,.18)', borderColor: 轴 === '敌' ? 边色(轴, 值) : undefined } },
+          h('span', 名字样式(r), (r.显示 || r.名) + (r.昵称 ? ' (' + r.名 + ')' : '')))
+      }
+      // 一条轴 = 名字在左上、分数在右上、条子在下（和「心情」的 14 条一个样子）
+      const 轴行 = (key, 名, 值, 条子) => h('div', { key, style: { display: 'flex', flexDirection: 'column', gap: 4 } },
+        h('div', { 'data-em-row': '' }, h('span', {}, 名), h('span', {}, 百分(值) + '%')),
+        条子)
       return h('div', { 'data-em-sec': '', style: { marginTop: 0 } },
-        h('div', { 'data-em-h': '' }, '关系列表'),
-        h('div', { 'data-em-note': '' }, '「关系」默认为全局模式。'),
-        h('div', { 'data-em-note': '' }, '「关系」分为三条轴，亲近、敌视与信任，前两轴之间的关联度可调，信任轴则完全独立。'),
-        h('div', { 'data-em-note': '' }, '此为判定分寸之参考，而非令大肥鱼演戏'),
+        h('div', { 'data-em-hero': '' },
+          h('div', { 'data-em-big': '' }, '关系列表'),
+          h('div', { 'data-em-note': '' }, '「关系」默认为全局模式。'),
+          h('div', { 'data-em-note': '' }, '「关系」分为三条轴，亲近、敌视与信任，前两轴之间的关联度可调，信任轴则完全独立。'),
+          h('div', { 'data-em-note': '' }, '此为判定分寸之参考，而非令大肥鱼演戏')),
         ...(条.length
-          ? 条.map((r) => h('div', { key: r.名, style: { display: 'flex', flexDirection: 'column', gap: 3 } },
-            h('div', { 'data-em-row': '' },
-              h('span', {}, (r.显示 || r.名) + (r.昵称 ? '（' + r.名 + '）' : '') + '（' + r.话 + '，' + r.次 + ' 次' + (r.最近 ? '，' + 多久前(r.最近) : '') + '）'),
-              h('span', {}, '亲 ' + Math.round(Number(r.亲) * 100) + '%　敌 ' + Math.round(Number(r.敌) * 100) + '%　信 ' + Math.round(Number(r.信) * 100) + '%')),
-            h('div', { 'data-em-bar': '' },
-              h('div', { 'data-em-fill': '', style: { width: (Math.round(Number(r.亲) * 100) <= 0 ? 0 : Math.max(2, Math.round(Number(r.亲) * 100))) + '%' } })),
-            h('div', { 'data-em-bar': '' },
-              h('div', { 'data-em-fill': '', style: { width: (Math.round(Number(r.敌) * 100) <= 0 ? 0 : Math.max(2, Math.round(Number(r.敌) * 100))) + '%', background: 'rgba(200,90,90,.72)' } })),
-            h('div', { 'data-em-bar': '' },
-              h('div', { 'data-em-fill': '', style: { width: (Math.round(Number(r.信) * 100) <= 0 ? 0 : Math.max(2, Math.round(Number(r.信) * 100))) + '%', background: 'rgba(90,200,140,.72)' } }))))
+          ? 条.map((r) => h('div', { key: r.名, style: { display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 } },
+            h('div', { 'data-em-meta': '', style: { marginBottom: 2 } },
+              名字盒(r),              r.最近 ? h('span', {}, 多久前(r.最近)) : null),
+            轴行('亲', '亲近', r.亲,
+              h('div', { 'data-em-bar': 'rel' },
+                h('div', { 'data-em-fill': '', 'data-axis': '亲', 'data-hot': 百分(r.亲) >= 71 ? '' : undefined, style: { width: (百分(r.亲) <= 0 ? 0 : Math.max(2, 百分(r.亲))) + '%' } },
+                  h('span', { 'data-em-wisp': '' })))),
+            轴行('敌', '敌视', r.敌,
+              h('div', { 'data-em-bar': 'rel' },
+                h('div', { 'data-em-fill': '', 'data-axis': '敌', style: (() => { const v = Math.max(2, 百分(r.敌)); return { width: (百分(r.敌) <= 0 ? 0 : v) + '%', '--w': v } })() },
+                  h('span', { 'data-em-goo': '' })))),
+            轴行('信', '信任', r.信,
+              h('div', { 'data-em-bar': 'rel' },
+                h('div', { 'data-em-fill': '', 'data-axis': '信', style: (() => { const v = Math.max(2, 百分(r.信)); return { width: (百分(r.信) <= 0 ? 0 : v) + '%', '--w': v } })() },
+                  h('span', { 'data-em-sheen': '' }))))))
           : [h('div', { 'data-em-note': '' }, '还没记下谁 —— 聊几轮就有了')]))
     }
 
