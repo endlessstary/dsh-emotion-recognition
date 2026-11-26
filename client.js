@@ -89,6 +89,8 @@ window.__ModuleLoader__.load({
         h('div', { 'data-em-h': '' }, '关系账 —— 按人记'),
         h('div', { 'data-em-note': '' }, '心情按会话（她此刻什么状态），关系按人（她对某个人的账，全局一份）。'
           + '两根轴：亲近 和 敌视 各记各的 —— 亲近攒得慢、敌视涨得快（负面更扎心）；处得好敌视会慢慢退。'
+          + '开发场合也算关系的一部分（一起改插件、一起踩坑，也是「和岁岁处得怎么样」），所以默认全局一本账；'
+          + '真想让某个场合只记「在场」，把它填进 config.json 的 不记感情场合。'
           + '这是判定分寸的参考，不是要她演。'),
         ...(条.length
           ? 条.map((r) => h('div', { key: r.名, style: { display: 'flex', flexDirection: 'column', gap: 3 } },
@@ -104,6 +106,30 @@ window.__ModuleLoader__.load({
           : [h('div', { 'data-em-note': '' }, '还没记下谁 —— 聊几轮就有了')]))
     }
 
+    // 一条候选记忆：默认只显示分数，点「为什么」展开分项（2026-11-26，借鉴 dsh-noema 的 explain）
+    function 候选行(props) {
+      const c = props.c || {}
+      const [开, set开] = React.useState(false)
+      const 项 = c.项
+      const 是联想 = Boolean(项 && 项.联想)
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
+        h('div', { 'data-em-row': '', style: { gap: 6, alignItems: 'center' } },
+          h('span', { 'data-em-chip': '', style: { background: c.命中 ? 'rgba(90,200,140,.22)' : 'rgba(127,127,127,.16)' } }, c.命中 ? '命中' : '未命中'),
+          是联想 ? h('span', { 'data-em-chip': '', style: { background: 'rgba(160,120,220,.22)' } }, '联想') : null,
+          h('span', {}, c.分 + '：' + c.text),
+          项 ? h('button', { 'data-em-tab': '', style: { padding: '0 6px', fontSize: 11 }, onClick: () => set开(!开) }, 开 ? '收起' : '为什么') : null),
+        开 && 项 && 项.联想
+          ? h('div', { 'data-em-note': '', style: { marginLeft: 12 } },
+            '联想：顺着「' + (c.桥文 || c.桥 || '某个词') + '」牵出来的（强度 ' + 项.联想 + '）')
+          : 开 && 项
+          ? h('div', { 'data-em-note': '', style: { marginLeft: 12 } },
+            '新鲜 ' + 项.新鲜 + '×' + 项.权.新鲜 + '　重要 ' + 项.重要 + '×' + 项.权.重要
+            + '　相关 ' + 项.相关 + '×' + 项.权.相关 + '　心境 ' + 项.一致 + '×' + 项.权.心境
+            + '　→ 合计 ' + 项.合计
+            + (c.来源 && c.来源.indexOf('向量') >= 0 ? '（向量也命中了 ' + (c.语义 || 0) + '）' : '（纯字面）')
+            + '　门槛 ' + (props.门槛 || 0.45))
+          : null)
+    }
     function 记录页(props) {
       const [条, set条] = React.useState([])
       const [错, set错] = React.useState('')
@@ -128,10 +154,8 @@ window.__ModuleLoader__.load({
             ? h('div', {},
               h('div', { 'data-em-meta': '' }, h('span', {}, t.想起.命中 ? '本轮命中' : '本轮未命中'), h('span', {}, t.想起.原因 || '')),
               (t.想起.候选 || []).length
-                ? h('div', { 'data-em-meta': '', style: { flexDirection: 'column', alignItems: 'flex-start', gap: 2 } },
-                  ...(t.想起.候选 || []).map((c, k) => h('span', { key: k },
-                    h('span', { 'data-em-chip': '', style: { marginRight: 6, background: c.命中 ? 'rgba(90,200,140,.22)' : 'rgba(127,127,127,.16)' } }, c.命中 ? '命中' : '未命中'),
-                    c.分 + '：' + c.text)))
+                ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 3 } },
+                  ...(t.想起.候选 || []).map((c, k) => h(候选行, { key: k, c: c })))
                 : h('div', { 'data-em-meta': '' }, '没有候选'))
             : h('div', { 'data-em-meta': '' }, '这轮没有真人发言，未查记忆'),
           h('div', { 'data-em-meta': '' },
@@ -459,7 +483,7 @@ window.__ModuleLoader__.load({
           h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
             h('span', {}, '关系账（按人记暖度）'),
             h('input', { type: 'checkbox', checked: 配.关系账 !== false, onChange: (e) => 存({ 关系账: e.target.checked }) })),
-          h('div', { 'data-em-note': '' }, '记「跟这个人处得怎么样」，只给判定当分寸参考（熟人说的话更进得去）；情绪场本身仍按会话。'),
+          h('div', { 'data-em-note': '' }, '记「跟这个人处得怎么样」，只给判定当分寸参考（熟人说的话更进得去）；情绪场本身仍按会话。「不记感情场合」默认空 = 全局一本账（改插件也算关系的一部分），填了场合名那个场合才只更新最近/次数。'),
           h(文本, {
             键: '主人名字', 名: '主人名字（QQ 昵称）', 值: 配.主人名字, 存: 改, 占位: '比如 endlessstary',
             说明: '只有名字对得上才认作主人：起点暖度更高、判定里能称「主人」。空着 = 谁都不当主人 —— 宁可不认，也别认错（私聊不等于主人）。',
@@ -479,7 +503,11 @@ window.__ModuleLoader__.load({
           h('div', { 'data-em-h': '' }, '记忆设置'),
           h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
             h('span', {}, '按关键词想起旧记忆'),
-            h('input', { type: 'checkbox', checked: 配.记忆注入 !== false, onChange: (e) => 存({ 记忆注入: e.target.checked }) })),
+            h('input', { type: 'checkbox', checked: 配.记忆注入 !== false, onChange: (e) => 存({ 记忆注入: e.target.checked }) })),          h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
+            h('span', {}, '联想（顺着想起的事再摸一跳）'),
+            h('input', { type: 'checkbox', checked: 配.联想 !== false, onChange: (e) => 存({ 联想: e.target.checked }) })),
+          h('div', { 'data-em-note': '' }, '这轮想起的事里那些少见的词，会牵出另一件相关的事（记录页会标「联想」，说明是顺着什么想起来的）。'),
+          h(数字, { 键: '联想门槛', 名: '联想门槛', 值: 配.联想门槛, 存: 改, 说明: '共享稀词的权重到多少才算联得上；调高更矜持，调低更发散' }),
           (() => {
             // hooks 必须在任何 return 之前，顺序不能变（上一版在这里写反了，整个设置页白屏）
             const [就绪, set就绪] = React.useState(null)
