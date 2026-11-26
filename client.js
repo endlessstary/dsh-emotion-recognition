@@ -29,10 +29,15 @@ window.__ModuleLoader__.load({
 [data-em-card]{display:flex;flex-direction:column;gap:5px;padding:10px 12px;border-radius:10px;background:rgba(127,127,127,.06);margin-bottom:8px;}
 [data-em-sess]{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid rgba(127,127,127,.22);margin-bottom:7px;cursor:pointer;}
 [data-em-sess][data-on]{border-color:rgba(90,140,255,.55);background:rgba(90,140,255,.10);}
-[data-em-bar]{height:6px;border-radius:3px;background:rgba(127,127,127,.18);overflow:hidden;}
-[data-em-fill]{height:100%;background:rgba(90,140,255,.72);}
-[data-em-fill][data-full]{filter:brightness(1.22) saturate(1.12);animation:em-glow 2.4s ease-in-out infinite;}
-@keyframes em-glow{0%,100%{box-shadow:0 0 6px rgba(120,160,255,.45);}50%{box-shadow:0 0 13px rgba(255,176,120,.62);}}
+[data-em-bar]{height:6px;border-radius:3px;background:rgba(127,127,127,.18);overflow:visible;}
+[data-em-fill]{height:100%;background:rgba(90,140,255,.72);border-radius:3px;}
+/* 到了 80% 以上的情绪条会「呼吸」：光晕缓缓收缩、透明度起伏，颜色也跟着微微明暗 */
+[data-em-fill][data-lit]{animation:em-breathe 3.6s ease-in-out infinite;}
+@keyframes em-breathe{
+  0%,100%{opacity:1;filter:brightness(var(--b0,1)) saturate(.95);box-shadow:0 0 7px var(--g1,transparent),0 0 16px var(--g2,transparent);}
+  50%{opacity:.9;filter:brightness(var(--b1,1.1)) saturate(1.05);box-shadow:0 0 3px var(--g1,transparent),0 0 8px var(--g2,transparent);}
+}
+@media (prefers-reduced-motion: reduce){[data-em-fill][data-lit]{animation:none;}}
 /* 关系三条轴：各自的"水色"，沿着条子慢慢流（2026-11-26） */
 [data-em-fill][data-axis]{background-size:200% 100%;background-position:0% 50%;animation:em-flow 7s linear infinite;}
 /* 亲近：0~70% 用「樱云粉 → 云水青 → 浅蓝 → 薄暮蓝」，71~100% 用「暖曦 → 橘粉 → 藕粉 → 雾蓝 → 碧霄」；
@@ -305,11 +310,25 @@ window.__ModuleLoader__.load({
     // 分数越高越亮（80% → 暗一点的本色，100% 及以上 → 最亮 + 原有的呼吸发光）。
     const 条色 = (词, 百分) => {
       const v = Math.max(0, Math.min(140, Number(百分) || 0))
-      if (v < 80) return { background: 'rgba(90,140,255,.72)' }
+      // 不到 80%：黑色斜杠（垫一层极淡的底，短条也看得见）
+      if (v < 80) {
+        return {
+          backgroundColor: 'rgba(90,100,115,.10)',
+          backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,.78) 0 1.5px, rgba(0,0,0,0) 1.5px 7px)',
+        }
+      }
       const t = Math.min(1, (v - 80) / 20)   // 80% → 0，100% 及以上 → 1
+      const c = 取色(词)
+      const 底亮 = 0.80 + t * 0.60
+      // 变色之后往外冒一点微光（萤火虫那种）；呼吸时靠这几个变量动，别写死
       return {
-        background: 取色(词),
-        filter: 'brightness(' + (0.80 + t * 0.60).toFixed(2) + ') saturate(' + (0.90 + t * 0.35).toFixed(2) + ')',
+        background: c,
+        filter: 'brightness(' + 底亮.toFixed(2) + ') saturate(' + (0.90 + t * 0.35).toFixed(2) + ')',
+        boxShadow: '0 0 ' + Math.round(4 + t * 4) + 'px ' + 半透明(c, 0.55) + ', 0 0 ' + Math.round(10 + t * 10) + 'px ' + 半透明(c, 0.30),
+        '--b0': 底亮.toFixed(2),
+        '--b1': (底亮 + 0.12).toFixed(2),
+        '--g1': 半透明(c, 0.55),
+        '--g2': 半透明(c, 0.30),
       }
     }
     // 卡片跟着变色（2026-11-26 晚，岁岁要的）：有情绪到 80% 时，卡片主体保持白，
@@ -486,7 +505,7 @@ window.__ModuleLoader__.load({
               return h('div', { key: 词, style: { display: 'flex', flexDirection: 'column', gap: 3 } },
                 h('div', { 'data-em-row': '' }, h('span', {}, 词), h('span', {}, v + '%')),
                 h('div', { 'data-em-bar': '' },
-                  h('div', { 'data-em-fill': '', 'data-full': v >= 100 ? '' : undefined, style: { width: (v <= 0 ? 0 : Math.max(1, Math.min(100, v))) + '%', ...条色(词, v) } })))
+                  h('div', { 'data-em-fill': '', 'data-full': v >= 100 ? '' : undefined, 'data-lit': v >= 80 ? '' : undefined, style: { width: (v <= 0 ? 0 : Math.max(1, Math.min(100, v))) + '%', ...条色(词, v) } })))
             })
             : [h('div', { 'data-em-note': '' }, '还没有状态')])))
       const 客观条们 = Object.entries((st && st.强度) || {}).sort((a, b) => b[1] - a[1])
@@ -511,7 +530,7 @@ window.__ModuleLoader__.load({
             h('div', { key: pair[0], style: { display: 'flex', flexDirection: 'column', gap: 3 } },
               h('div', { 'data-em-row': '' }, h('span', {}, pair[0]), h('span', {}, Math.round(Number(pair[1]) * 100) + '%')),
               h('div', { 'data-em-bar': '' },
-                h('div', { 'data-em-fill': '', 'data-full': Math.round(Number(pair[1]) * 100) >= 100 ? '' : undefined, style: { width: (Math.round(Number(pair[1]) * 100) <= 0 ? 0 : Math.max(1, Math.round(Number(pair[1]) * 100))) + '%', ...条色(pair[0], Math.round(Number(pair[1]) * 100)) } }))))))
+                h('div', { 'data-em-fill': '', 'data-full': Math.round(Number(pair[1]) * 100) >= 100 ? '' : undefined, 'data-lit': Math.round(Number(pair[1]) * 100) >= 80 ? '' : undefined, style: { width: (Math.round(Number(pair[1]) * 100) <= 0 ? 0 : Math.max(1, Math.round(Number(pair[1]) * 100))) + '%', ...条色(pair[0], Math.round(Number(pair[1]) * 100)) } }))))))
       return h('div', {},
         h('div', { 'data-em-seg': '' },
           h('button', { 'data-on': 面 === '主观' ? '' : undefined, onClick: () => set面('主观') }, '主观'),
@@ -676,6 +695,13 @@ window.__ModuleLoader__.load({
           h(文本, {
             键: '主人名字', 名: '主人名字（QQ 昵称）', 值: 配.主人名字, 存: 改, 占位: '比如 endlessstary',
             说明: '只有名字对得上才认作主人：起点暖度更高、判定里能称「主人」。空着 = 谁都不当主人 —— 宁可不认，也别认错（私聊不等于主人）。',
+          }),
+          h(文本, {
+            键: '主人账号', 名: '主人账号（渠道:编号，逗号分隔）',
+            值: Array.isArray(配.主人账号) ? 配.主人账号.join(', ') : String(配.主人账号 || ''),
+            存: (k, v) => 改(k, String(v).split(/[,，\s]+/).filter(Boolean)),
+            占位: '比如 qq:123456',
+            说明: '认主人优先看这个，不看昵称（昵称会重名、也能随时改）。QQ 填 qq:你的QQ号；微信将来填 wechat:wxid。命中就当主人，账上的名字固定成「主人名字」，改昵称也不会另起一条。',
           }),
           h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
             h('span', {}, '把「眼前这人」写进每轮注入'),
