@@ -17,6 +17,10 @@
 - **掩饰**（本 fork 新增）：每项情绪带一个「泄露」系数，注入里会说「显露于外的许是…；许藏于内心的…」。
 - **关系账**（本 fork 新增）：按**人**记三条轴——亲近 / 敌视 / 信任（各 0~1，全局一份）。
   判定按每轮推，她也能自己定：`emo_alias` 起叫法、`emo_trust` 定信任。设置页的「关系」页签里，主人永远第一。
+- **遗忘**（本 fork 新增）：多久没说话就慢慢往中性淡（亲近/敌视半衰 45 天、敌意慢 2.5 倍、信任 90 天）；
+  再久（90 天）而且已经淡了的会「淡忘」——不显示但留着，再说一句话就醒来。**主人永不淡忘**。
+- **渠道**：每条关系记来源（qq / wechat / …）。只有 QQ/微信**自动**记账；B 站、贴吧不是会话，
+  没有稳定的身份流，那些地方对她的意义交给 `emo_remember`。
 
 ## 相对上游的改动
 
@@ -42,13 +46,13 @@
 
 ```bash
 # 直接从 Release 装（把版本号换成你要的）
-dsh plugin --profile web add https://github.com/endlessstary/dsh-emotion-recognition/releases/download/v0.2.0/dsh-emotion-recognition-0.2.0.tgz
+dsh plugin --profile web add https://github.com/endlessstary/dsh-emotion-recognition/releases/download/v0.2.1/dsh-emotion-recognition-0.2.1.tgz
 ```
 
 或者把 tgz 下到本地、填绝对路径：
 
 ```bash
-dsh plugin --profile web add D:/path/to/dsh-emotion-recognition-0.2.0.tgz
+dsh plugin --profile web add D:/path/to/dsh-emotion-recognition-0.2.1.tgz
 ```
 
 装完重启 DSH。设置页左列会出现「情绪记忆」。
