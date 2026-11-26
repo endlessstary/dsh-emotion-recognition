@@ -42,13 +42,13 @@
 
 ```bash
 # 直接从 Release 装（把版本号换成你要的）
-dsh plugin --profile web add https://github.com/endlessstary/dsh-emotion-recognition/releases/download/v0.1.5/dsh-emotion-recognition-0.1.5.tgz
+dsh plugin --profile web add https://github.com/endlessstary/dsh-emotion-recognition/releases/download/v0.2.0/dsh-emotion-recognition-0.2.0.tgz
 ```
 
 或者把 tgz 下到本地、填绝对路径：
 
 ```bash
-dsh plugin --profile web add D:/path/to/dsh-emotion-recognition-0.1.5.tgz
+dsh plugin --profile web add D:/path/to/dsh-emotion-recognition-0.2.0.tgz
 ```
 
 装完重启 DSH。设置页左列会出现「情绪记忆」。
