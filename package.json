@@ -1,6 +1,6 @@
 {
   "name": "dsh-emotion-recognition",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "情绪记忆与主观心情（fork 自 xsy822/dsh-emotion-memory 0.1.4）：PAD 情绪场 + 带情感指纹的记忆 + 她自己的主观评分",
   "type": "module",
   "main": "lib/index.js",

@@ -57,6 +57,53 @@ window.__ModuleLoader__.load({
         props.说明 ? h('div', { 'data-em-note': '', style: { marginTop: -2, marginBottom: 4 } }, props.说明) : null)
     }
 
+    function 文本(props) {
+      const [v, setV] = React.useState(String(props.值 == null ? '' : props.值))
+      React.useEffect(() => { setV(String(props.值 == null ? '' : props.值)) }, [props.值])
+      return h('div', {},
+        h('label', { 'data-em-row': '', style: { cursor: 'text' } },
+          h('span', {}, props.名),
+          h('input', {
+            'data-em-input': '', type: 'text', value: v, placeholder: props.占位 || '',
+            onChange: (e) => setV(e.target.value),
+            onBlur: () => { if (String(v) !== String(props.值 == null ? '' : props.值)) props.存(props.键, String(v).trim()) },
+          })),
+        props.说明 ? h('div', { 'data-em-note': '', style: { marginTop: -2, marginBottom: 4 } }, props.说明) : null)
+    }
+
+    function 多久前(at) {
+      const 分 = Math.max(0, Math.round((Date.now() - Number(at || 0)) / 60000))
+      if (!at) return ''
+      if (分 < 1) return '刚刚'
+      if (分 < 60) return 分 + ' 分钟前'
+      const 时 = Math.round(分 / 60)
+      if (时 < 24) return 时 + ' 小时前'
+      return Math.round(时 / 24) + ' 天前'
+    }
+
+    // 关系账：按人记（心情按会话，关系按人，全局存）
+    function 关系页(props) {
+      const st = props.st || {}
+      const 条 = st.关系 || []
+      return h('div', { 'data-em-sec': '', style: { marginTop: 0 } },
+        h('div', { 'data-em-h': '' }, '关系账 —— 按人记'),
+        h('div', { 'data-em-note': '' }, '心情按会话（她此刻什么状态），关系按人（她对某个人的账，全局一份）。'
+          + '两根轴：亲近 和 敌视 各记各的 —— 亲近攒得慢、敌视涨得快（负面更扎心）；处得好敌视会慢慢退。'
+          + '这是判定分寸的参考，不是要她演。'),
+        ...(条.length
+          ? 条.map((r) => h('div', { key: r.名, style: { display: 'flex', flexDirection: 'column', gap: 3 } },
+            h('div', { 'data-em-row': '' },
+              h('span', {}, (r.显示 || r.名) + (r.昵称 ? '（' + r.名 + '）' : '') + '（' + r.话 + '，' + r.次 + ' 次' + (r.最近 ? '，' + 多久前(r.最近) : '') + '）'),
+              h('span', {}, '亲 ' + Math.round(Number(r.亲) * 100) + '%　敌 ' + Math.round(Number(r.敌) * 100) + '%　信 ' + Math.round(Number(r.信) * 100) + '%')),
+            h('div', { 'data-em-bar': '' },
+              h('div', { 'data-em-fill': '', style: { width: (Math.round(Number(r.亲) * 100) <= 0 ? 0 : Math.max(2, Math.round(Number(r.亲) * 100))) + '%' } })),
+            h('div', { 'data-em-bar': '' },
+              h('div', { 'data-em-fill': '', style: { width: (Math.round(Number(r.敌) * 100) <= 0 ? 0 : Math.max(2, Math.round(Number(r.敌) * 100))) + '%', background: 'rgba(200,90,90,.72)' } })),
+            h('div', { 'data-em-bar': '' },
+              h('div', { 'data-em-fill': '', style: { width: (Math.round(Number(r.信) * 100) <= 0 ? 0 : Math.max(2, Math.round(Number(r.信) * 100))) + '%', background: 'rgba(90,200,140,.72)' } }))))
+          : [h('div', { 'data-em-note': '' }, '还没记下谁 —— 聊几轮就有了')]))
+    }
+
     function 记录页(props) {
       const [条, set条] = React.useState([])
       const [错, set错] = React.useState('')
@@ -93,7 +140,9 @@ window.__ModuleLoader__.load({
     }
 
     // 生理状态词：她打了也不折算成情绪，只在界面上说明「暂不分析」。
-    const 生理词 = ['累', '困', '饿', '乏', '倦', '疲惫', '困倦', '没精神', '熬夜', '撑不住', '酸痛', '头疼', '不舒服', '想睡']
+    const 生理词 = ['累', '困', '饿', '乏', '倦', '疲惫', '困倦', '没精神', '熬夜', '撑不住', '酸痛', '头疼', '不舒服', '想睡',
+      // 2026-11-26 补：犯困这类常见说法直接认成生理，不用等折算模型判一次
+      '犯困', '好困', '困死', '睡不醒', '打瞌睡', '犯饿', '没力气', '乏力', '没劲', '头晕', '想躺着', '一动不动']
     // 情绪条的颜色：按 Plutchik 情绪轮的家族配色（joy 黄、anticipation 橙、trust 绿、surprise 青、
     // sadness 蓝、disgust 紫、anger 红；serenity/apprehension 等变体取同族的浅/深色）。
     const 情绪色 = {
@@ -157,12 +206,28 @@ window.__ModuleLoader__.load({
       得意: { 乐观: 0.5, 喜悦: 0.3 },
     }
     // 把她的词按表拆到 14 个通道；表里没有的词，若本身就是通道名就直接算。
-    function 折算到通道(她分, 通道) {
+    // 一个词怎么折算：全局词表（插件折算过、带 类/通道）→ 内置近义表 → 本身就是通道名
+    function 取映射(词, 通道, 词表) {
+      const 条 = 词表 && 词表[词]
+      if (条 && typeof 条 === 'object') {
+        if (条.类 === '生理') return null
+        const 通 = 条.通道 || (条.类 ? null : 条)   // 新格式 / 旧格式
+        if (通 && Object.keys(通).length) return 通
+      }
+      return 近义[词] || (通道.includes(词) ? { [词]: 1 } : null)
+    }
+    // 这个词是不是生理状态（硬编码那批 + 折算模型判定为生理的）
+    function 是生理(词, 词表) {
+      if (生理词.includes(词)) return true
+      const 条 = 词表 && 词表[词]
+      return Boolean(条 && 条.类 === '生理')
+    }
+    function 折算到通道(她分, 通道, 词表) {
       const 结果 = {}
       for (const [词, 分] of Object.entries(她分 || {})) {
         const v = Number(分) || 0
         if (v <= 0) continue
-        const 映射 = 近义[词] || (通道.includes(词) ? { [词]: 1 } : null)
+        const 映射 = 取映射(词, 通道, 词表)
         if (!映射) continue
         for (const [通, 系数] of Object.entries(映射)) {
           if (!通道.includes(通)) continue
@@ -181,12 +246,14 @@ window.__ModuleLoader__.load({
       const 通道 = Object.keys((st && st.强度) || {})
       const 她分 = (自 && 自.scores && typeof 自.scores === 'object') ? 自.scores : {}
       const 她词 = Object.keys(她分).filter((词) => Number(她分[词]) > 0).sort((a, b) => Number(她分[b]) - Number(她分[a]))
-      const 折算后 = 折算到通道(她分, 通道)
+      const 折算后 = 折算到通道(她分, 通道, (st && st.词表) || {})
+      // 三种来源都没对上的词：单独列出来，别让它们凭空消失
+      const 未对上 = 她词.filter((词) => !取映射(词, 通道, (st && st.词表) || {}) && !是生理(词, (st && st.词表) || {}))
       // 不归一：情绪各自独立，加起来不必是 100%。折算值 ×10 就是百分比（可能超过 100，那是真的强）。
       const 强度 = (词) => Math.round((折算后[词] || 0) * 10)
       const 排序 = 通道.slice().sort((a, b) => (折算后[b] || 0) - (折算后[a] || 0))
       const 合计 = 她词.reduce((a, 词) => a + Number(她分[词]), 0)
-      const 生理分 = 她词.filter((词) => 生理词.includes(词))
+      const 生理分 = 她词.filter((词) => 是生理(词, (st && st.词表) || {}))
       const 生理提示 = 生理分.length
         ? ('（' + 生理分.map((词) => 词 + ' ' + 她分[词]).join('、') + ' 属生理状态，暂不分析）')
         : ''
@@ -199,7 +266,8 @@ window.__ModuleLoader__.load({
           h('div', { 'data-em-sub': '' }, 她词.length
             ? ('情绪分析：' + (排序.filter((词) => 强度(词) > 0).map((词) => 词 + ' ' + 强度(词) + '%').join(' / ') || '（没对上任何通道）'))
             : ''),
-          生理提示 ? h('div', { 'data-em-note': '' }, 生理提示) : null),
+          生理提示 ? h('div', { 'data-em-note': '' }, 生理提示) : null,
+          未对上.length ? h('div', { 'data-em-note': '' }, '这些词还未收录于情绪分析档案：' + 未对上.join('、') + '（插件会尝试分析，若成功便记录进档案之中）') : null),
         h('div', { 'data-em-sec': '' },
           h('div', { 'data-em-h': '' }, '14 项情绪 —— 主观评分分析'),
           ...(排序.length
@@ -208,7 +276,7 @@ window.__ModuleLoader__.load({
               return h('div', { key: 词, style: { display: 'flex', flexDirection: 'column', gap: 3 } },
                 h('div', { 'data-em-row': '' }, h('span', {}, 词), h('span', {}, v + '%')),
                 h('div', { 'data-em-bar': '' },
-                  h('div', { 'data-em-fill': '', 'data-full': v >= 100 ? '' : undefined, style: { width: Math.max(1, Math.min(100, v)) + '%', background: v >= 100 ? 取色(词) : 'rgba(90,140,255,.72)' } })))
+                  h('div', { 'data-em-fill': '', 'data-full': v >= 100 ? '' : undefined, style: { width: (v <= 0 ? 0 : Math.max(1, Math.min(100, v))) + '%', background: v >= 100 ? 取色(词) : 'rgba(90,140,255,.72)' } })))
             })
             : [h('div', { 'data-em-note': '' }, '还没有状态')])))
       const 客观页 = h('div', {},
@@ -223,13 +291,14 @@ window.__ModuleLoader__.load({
             .sort((a, b) => b[1] - a[1])
             .map(([k, v]) => k + ' ' + Math.round(Number(v) * 100) + '%')
             .join('　') || '无'))),
+
         h('div', { 'data-em-sec': '' },
           h('div', { 'data-em-h': '' }, '14 项情绪 —— 系统客观评分'),
           ...Object.entries((st && st.强度) || {}).sort((a, b) => b[1] - a[1]).map((pair) =>
             h('div', { key: pair[0], style: { display: 'flex', flexDirection: 'column', gap: 3 } },
               h('div', { 'data-em-row': '' }, h('span', {}, pair[0]), h('span', {}, Math.round(Number(pair[1]) * 100) + '%')),
               h('div', { 'data-em-bar': '' },
-                h('div', { 'data-em-fill': '', 'data-full': Math.round(Number(pair[1]) * 100) >= 100 ? '' : undefined, style: { width: Math.max(1, Math.round(Number(pair[1]) * 100)) + '%', background: Math.round(Number(pair[1]) * 100) >= 100 ? 取色(pair[0]) : 'rgba(90,140,255,.72)' } }))))))
+                h('div', { 'data-em-fill': '', 'data-full': Math.round(Number(pair[1]) * 100) >= 100 ? '' : undefined, style: { width: (Math.round(Number(pair[1]) * 100) <= 0 ? 0 : Math.max(1, Math.round(Number(pair[1]) * 100))) + '%', background: Math.round(Number(pair[1]) * 100) >= 100 ? 取色(pair[0]) : 'rgba(90,140,255,.72)' } }))))))
       return h('div', {},
         h('div', { 'data-em-seg': '' },
           h('button', { 'data-on': 面 === '主观' ? '' : undefined, onClick: () => set面('主观') }, '主观'),
@@ -377,7 +446,31 @@ window.__ModuleLoader__.load({
           h(数字, { 键: '睡眠回复', 名: '跨夜睡一觉 +', 值: 配.睡眠回复, 步: 1, 存: 改, 说明: '跨过凌晨且间隔够久，算睡一觉，回多少' }),
           h(数字, { 键: '闲置回复', 名: '闲着每小时 +', 值: 配.闲置回复, 步: 1, 存: 改, 说明: '一小时以上没动静，按歇着算，每小时回多少' }),
           h(数字, { 键: '小憩回复', 名: '小憩每小时 +', 值: 配.小憩回复, 步: 1, 存: 改, 说明: '半小时到一小时没动静的回复速度' }),
-          h(数字, { 键: '每轮扣', 名: '每聊一轮 −', 值: 配.每轮扣, 步: 1, 存: 改, 说明: '每聊一轮额外扣多少；和"每小时掉"叠加' })),
+          h(数字, { 键: '每轮扣', 名: '每聊一轮 −', 值: 配.每轮扣, 步: 1, 存: 改, 说明: '每聊一轮额外扣多少；和"每小时掉"叠加' }),
+          h('div', { 'data-em-h2': '' }, '判定（省调用）'),
+          h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
+            h('span', {}, '事务性轮次不调判定模型'),
+            h('input', { type: 'checkbox', checked: 配.快评跳过 !== false, onChange: (e) => 存({ 快评跳过: e.target.checked }) })),
+          h('div', { 'data-em-note': '' }, '只有「整句是应答」或「整句只有图/表情」、并且她自己那轮也只回了一两句时，才跳过判定；两边任何一边有情绪信号就照旧判。表情包的名字会以 [表情:名字] 送给判定模型当线索。'),
+          h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
+            h('span', {}, '注入里说「旁人看得出什么」'),
+            h('input', { type: 'checkbox', checked: 配.掩饰层 !== false, onChange: (e) => 存({ 掩饰层: e.target.checked }) })),
+          h('div', { 'data-em-note': '' }, '关掉：注入里只写「内心」是什么；开着会多一句「显露于外的许是…」，只是描述，不是要她演。'),
+          h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
+            h('span', {}, '关系账（按人记暖度）'),
+            h('input', { type: 'checkbox', checked: 配.关系账 !== false, onChange: (e) => 存({ 关系账: e.target.checked }) })),
+          h('div', { 'data-em-note': '' }, '记「跟这个人处得怎么样」，只给判定当分寸参考（熟人说的话更进得去）；情绪场本身仍按会话。'),
+          h(文本, {
+            键: '主人名字', 名: '主人名字（QQ 昵称）', 值: 配.主人名字, 存: 改, 占位: '比如 endlessstary',
+            说明: '只有名字对得上才认作主人：起点暖度更高、判定里能称「主人」。空着 = 谁都不当主人 —— 宁可不认，也别认错（私聊不等于主人）。',
+          }),
+          h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
+            h('span', {}, '把「眼前这人」写进每轮注入'),
+            h('input', { type: 'checkbox', checked: 配.关系进注入 === true, onChange: (e) => 存({ 关系进注入: e.target.checked }) })),
+          h('div', { 'data-em-note': '' }, '默认关：注入已经够长了，先只让判定知道。'),          h('div', { 'data-em-h2': '' }, '三根轴的耦合'),
+          h(数字, { 键: '正向消退敌意', 名: '好相处 → 敌意消退', 值: 配.正向消退敌意, 存: 改, 说明: '一次正面互动让敌意退多少；0 = 敌意完全不动（各走各的——喜欢她做的饭，不该抵消她昨天骂你）' }),
+          h(数字, { 键: '负向折扣亲近', 名: '被惹 → 亲近折扣', 值: 配.负向折扣亲近, 存: 改, 说明: '一次负面互动让亲近掉多少；0 = 亲近完全不动' }),
+          h(数字, { 键: '最多连续跳过', 名: '最多连着跳几轮', 值: 配.最多连续跳过, 步: 1, 存: 改, 说明: '连着跳过这么多轮后，下一轮一定判一次，免得心情飘太久没人管' })),
         h('div', { 'data-em-sec': '' },
           h('div', { 'data-em-h': '' }, '记忆设置'),
           h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
@@ -457,7 +550,7 @@ window.__ModuleLoader__.load({
       }, [会话])
 
       const 刷新 = () => { if (会话) 取('/state?session=' + encodeURIComponent(会话)).then(setSt).catch(() => {}) }
-      const 页签 = [['mood', '心情'], ['mem', '记忆'], ['log', '记录'], ['cfg', '设置']]
+      const 页签 = [['mood', '心情'], ['rel', '关系'], ['mem', '记忆'], ['log', '记录'], ['cfg', '设置']]
       const 绑定模式 = st && st.配置 && st.配置.绑定模式
       const 绑定列表 = (st && st.绑定列表) || []
       // 绑定了但一个都没勾时，仍然列全部 —— 否则下拉空、三个页签全空白
@@ -480,9 +573,9 @@ window.__ModuleLoader__.load({
             'data-em-input': '', style: { width: 220 }, value: 会话,
             onChange: (e) => set会话(e.target.value),
           },
-            ...可看.map((x) => h('option', { key: x.id, value: x.id }, (x.title || x.id.slice(0, 8)) + (x.id === (st && st.key) ? '（当前）' : '')))),
-          h('span', { 'data-em-note': '' }, '正在看：' + 当前名)),
+            ...可看.map((x) => h('option', { key: x.id, value: x.id }, (x.title || x.id.slice(0, 8)) + (x.id === (st && st.key) ? '（当前）' : ''))))),
         页 === 'mood' ? h(心情页, { st: st, 会话: 会话 }) : null,
+        页 === 'rel' ? h(关系页, { st: st }) : null,
         页 === 'mem' ? h(记忆页, { 会话: 会话 }) : null,
         页 === 'log' ? h(记录页, { 会话: 会话 }) : null,
         页 === 'cfg' ? h(设置页, { st: st, 刷新: 刷新, 会话: 会话 }) : null)
