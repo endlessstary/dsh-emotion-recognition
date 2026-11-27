@@ -184,9 +184,12 @@ window.__ModuleLoader__.load({
         return { 'data-name': '敌', style: { backgroundImage: 'linear-gradient(90deg,' + 站 + ')', color: 'transparent', opacity: 1 } }
       }
       const 信名 = () => ({ 'data-name': '信', style: { backgroundImage: 'linear-gradient(90deg,#F7E7C6,#EBCB86,#D9A84A)', color: 'transparent', opacity: 1 } })
+      // 同分时谁说话（2026-11-27 岁岁定）：亲近 > 敌视 > 信任 —— 显式写出来，
+      // 别指望 sort 的稳定性：数组顺序一改，平手就换人了
+      const 轴先后 = { 亲: 0, 敌: 1, 信: 2 }
       const 最高轴 = (r) => {
         const 组 = [['亲', 百分(r.亲)], ['敌', 百分(r.敌)], ['信', 百分(r.信)]]
-        组.sort((a, b) => b[1] - a[1])
+        组.sort((a, b) => (b[1] - a[1]) || (轴先后[a[0]] - 轴先后[b[0]]))
         return 组[0][1] > 0 ? 组[0] : ['', 0]
       }
       const 名字样式 = (r) => {
@@ -222,7 +225,7 @@ window.__ModuleLoader__.load({
         ...(条.length
           ? 条.map((r) => h('div', { key: r.名, style: { display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 } },
             h('div', { 'data-em-meta': '', style: { marginBottom: 2 } },
-              名字盒(r),              r.最近 ? h('span', {}, 多久前(r.最近)) : null),
+              名字盒(r),              r.听闻 ? h('span', {}, '听闻') : (r.最近 ? h('span', {}, 多久前(r.最近)) : null)),
             轴行('亲', '亲近', r.亲,
               h('div', { 'data-em-bar': 'rel' },
                 h('div', { 'data-em-fill': '', 'data-axis': '亲', 'data-hot': 百分(r.亲) >= 71 ? '' : undefined, style: { width: (百分(r.亲) <= 0 ? 0 : Math.max(2, 百分(r.亲))) + '%' } },
@@ -685,7 +688,7 @@ window.__ModuleLoader__.load({
           h(数字, { 键: '弛豫P', 名: 'P 回落', 值: 配.弛豫P, 存: 改, 说明: '每 5 分钟向基线回落的比例；越大，情绪散得越快' }),
           h(数字, { 键: '弛豫A', 名: 'A 回落', 值: 配.弛豫A, 存: 改, 说明: '同上，作用于唤醒轴；唤醒本来就散得最快' }),
           h(数字, { 键: '弛豫D', 名: 'D 回落', 值: 配.弛豫D, 存: 改, 说明: '同上，作用于掌控轴' }),
-          h(数字, { 键: '强度衰减', 名: '通道强度衰减', 值: 配.强度衰减, 存: 改, 说明: '每轮把 14 个通道的强度乘 (1−这个数)；越大越健忘' }),
+          h(数字, { 键: '衰减倍数', 名: '情绪衰减速度', 值: 配.衰减倍数, 步: 0.1, 存: 改, 说明: '每种情绪按自己的半衰期淡掉（惊讶几分钟、悲伤几十分钟）；这个是整体倍率：2 = 快一倍，0.5 = 慢一半' }),
           h(数字, { 键: '读出阈值', 名: '读出阈值', 值: 配.读出阈值, 存: 改, 说明: '通道强度超过它才算进"成分"；调低更容易出现混合情绪' }),
           h('div', { 'data-em-h2': '' }, '精力'),
           h(数字, { 键: '精力初值', 名: '新会话起始精力', 值: 配.精力初值, 步: 1, 存: 改, 说明: '新会话第一次出现时有多少精力' }),
