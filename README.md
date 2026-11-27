@@ -57,7 +57,12 @@
 需要 DSH 0.2.1-rc.5 或 0.2.2-rc.x，Node ≥ 22。
 
 ```bash
-# 直接从 Release 装（最新版）
+# 1) 从 npm 装（最简单）
+dsh plugin --profile web add dsh-emotion-recognition
+```
+
+```bash
+# 2) 从 GitHub Release 装（指定版本）
 dsh plugin --profile web add https://github.com/endlessstary/dsh-emotion-recognition/releases/download/v0.2.9/dsh-emotion-recognition-0.2.9.tgz
 ```
 
