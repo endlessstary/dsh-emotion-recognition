@@ -30,12 +30,14 @@ window.__ModuleLoader__.load({
 [data-em-sess]{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid rgba(127,127,127,.22);margin-bottom:7px;cursor:pointer;}
 [data-em-sess][data-on]{border-color:rgba(90,140,255,.55);background:rgba(90,140,255,.10);}
 [data-em-bar]{height:6px;border-radius:3px;background:rgba(127,127,127,.18);overflow:visible;}
+/* 心情页那 14 条：描一圈细黑边，浅色的情绪（温和、放松那种）才不会和背景糊在一起 */
+[data-em-bar=""]{border:1px solid rgba(0,0,0,.42);}
 [data-em-fill]{height:100%;background:rgba(90,140,255,.72);border-radius:3px;}
 /* 到了 80% 以上的情绪条会「呼吸」：光晕缓缓收缩、透明度起伏，颜色也跟着微微明暗 */
 [data-em-fill][data-lit]{animation:em-breathe 3.6s ease-in-out infinite;}
 @keyframes em-breathe{
-  0%,100%{opacity:1;filter:brightness(var(--b0,1)) saturate(.95);box-shadow:0 0 7px var(--g1,transparent),0 0 16px var(--g2,transparent);}
-  50%{opacity:.9;filter:brightness(var(--b1,1.1)) saturate(1.05);box-shadow:0 0 3px var(--g1,transparent),0 0 8px var(--g2,transparent);}
+  0%,100%{opacity:1;filter:brightness(var(--b0,1)) saturate(var(--s0,1));box-shadow:0 0 7px var(--g1,transparent),0 0 16px var(--g2,transparent);}
+  50%{opacity:.9;filter:brightness(var(--b1,1.1)) saturate(var(--s1,1));box-shadow:0 0 3px var(--g1,transparent),0 0 8px var(--g2,transparent);}
 }
 @media (prefers-reduced-motion: reduce){[data-em-fill][data-lit]{animation:none;}}
 /* 关系三条轴：各自的"水色"，沿着条子慢慢流（2026-11-26） */
@@ -214,8 +216,8 @@ window.__ModuleLoader__.load({
       return h('div', { 'data-em-sec': '', style: { marginTop: 0 } },
         h('div', { 'data-em-hero': '' },
           h('div', { 'data-em-big': '' }, '关系列表'),
-          h('div', { 'data-em-note': '' }, '「关系」默认为全局模式。'),
-          h('div', { 'data-em-note': '' }, '「关系」分为三条轴，亲近、敌视与信任，前两轴之间的关联度可调，信任轴则完全独立。'),
+          h('div', { 'data-em-note': '' }, '「关系」默认为全局模式'),
+          h('div', { 'data-em-note': '' }, '「关系」分为三条轴，亲近、敌视与信任，前两轴之间的关联度可调，信任轴则完全独立'),
           h('div', { 'data-em-note': '' }, '此为判定分寸之参考，而非令大肥鱼演戏')),
         ...(条.length
           ? 条.map((r) => h('div', { key: r.名, style: { display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 } },
@@ -271,7 +273,7 @@ window.__ModuleLoader__.load({
       }, [props.会话])
       return h('div', { 'data-em-sec': '' },
         h('div', { 'data-em-h': '' }, '记录'),
-        h('div', { 'data-em-note': '' }, '一轮一条：原话、心情怎么变、想起了哪条记忆、判得有多确信。'),
+        h('div', { 'data-em-note': '' }, '每轮记一条：原文、心情变化、记忆回想与判断确信度'),
         ...(条.length ? 条.map((t, i) => h('div', { key: i, 'data-em-card': '' },
           h('div', { 'data-em-meta': '' },
             h('span', {}, new Date(t.at).toLocaleString()),
@@ -319,14 +321,18 @@ window.__ModuleLoader__.load({
       }
       const t = Math.min(1, (v - 80) / 20)   // 80% → 0，100% 及以上 → 1
       const c = 取色(词)
+      // 不改浅色：一律按分数提亮 + 轻微加饱和（浅色会不会糊，先看效果再说）
       const 底亮 = 0.80 + t * 0.60
+      const 底饱 = 0.90 + t * 0.35
       // 变色之后往外冒一点微光（萤火虫那种）；呼吸时靠这几个变量动，别写死
       return {
         background: c,
-        filter: 'brightness(' + 底亮.toFixed(2) + ') saturate(' + (0.90 + t * 0.35).toFixed(2) + ')',
+        filter: 'brightness(' + 底亮.toFixed(2) + ') saturate(' + 底饱.toFixed(2) + ')',
         boxShadow: '0 0 ' + Math.round(4 + t * 4) + 'px ' + 半透明(c, 0.55) + ', 0 0 ' + Math.round(10 + t * 10) + 'px ' + 半透明(c, 0.30),
         '--b0': 底亮.toFixed(2),
         '--b1': (底亮 + 0.12).toFixed(2),
+        '--s0': 底饱.toFixed(2),
+        '--s1': (底饱 + 0.05).toFixed(2),
         '--g1': 半透明(c, 0.55),
         '--g2': 半透明(c, 0.30),
       }
@@ -511,10 +517,17 @@ window.__ModuleLoader__.load({
       const 客观条们 = Object.entries((st && st.强度) || {}).sort((a, b) => b[1] - a[1])
       // 到 80% 的情绪（给卡片变色用），分数高的在前
       const 客观高们 = 客观条们.map(([k, v]) => [k, Math.round(Number(v) * 100)]).filter(([, v]) => v >= 80).sort((a, b) => b[1] - a[1])
+      // 状态行拆成几段：内心/PAD 一行；精力+显露 挪到「派生」下面；「此为底色」再单独一行（都不带句号）
+      const 状态行 = String((st && st.行) || '')
+      const 有精力 = 状态行.includes('精力')
+      const 内心段 = (有精力 ? 状态行.split('精力')[0] : 状态行).replace(/。\s*$/, '')
+      let 精力段 = 有精力 ? ('精力：' + 状态行.split('精力').slice(1).join('精力').replace(/^\s+/, '')) : ''
+      精力段 = 精力段.replace(/此为底色，而非命令。?/, '').trim().replace(/。$/, '')
+      const 底色句 = 状态行.includes('此为底色') ? '此为底色，而非命令' : ''
       const 客观页 = h('div', {},
         h('div', { 'data-em-hero': '', style: 卡面(客观高们, st && st.配置) || undefined },
           h('div', { 'data-em-big': '' }, (混[0] && 混[0][0]) || '平常'),
-          h('div', { 'data-em-sub': '' }, (st && st.行) || '还没有状态'),
+          h('div', { 'data-em-sub': '' }, 内心段 || '还没有状态'),
           h('div', { 'data-em-sub': '' }, 混.length
             ? '成分：' + 混.map((x) => x[0] + ' ' + Math.round(x[1] * 100) + '%').join(' / ')
             : '还没有成形的情绪'),
@@ -522,7 +535,9 @@ window.__ModuleLoader__.load({
             .filter(([, v]) => Number(v) > 0)
             .sort((a, b) => b[1] - a[1])
             .map(([k, v]) => k + ' ' + Math.round(Number(v) * 100) + '%')
-            .join('　') || '无'))),
+            .join('　') || '无')),
+          精力段 ? h('div', { 'data-em-sub': '' }, 精力段) : null,
+          底色句 ? h('div', { 'data-em-sub': '' }, 底色句) : null),
 
         h('div', { 'data-em-sec': '' },
           h('div', { 'data-em-h': '' }, '14 项情绪 —— 系统客观评分'),
