@@ -57,14 +57,20 @@
 需要 DSH 0.2.1-rc.5 或 0.2.2-rc.x，Node ≥ 22。
 
 ```bash
-# 直接从 Release 装（把版本号换成你要的）
-dsh plugin --profile web add https://github.com/endlessstary/dsh-emotion-recognition/releases/download/v0.2.2/dsh-emotion-recognition-0.2.2.tgz
+# 直接从 Release 装（最新版）
+dsh plugin --profile web add https://github.com/endlessstary/dsh-emotion-recognition/releases/download/v0.2.9/dsh-emotion-recognition-0.2.9.tgz
+```
+
+也可以直接从仓库装（跟 main 走，可能比 Release 新一点）：
+
+```bash
+dsh plugin --profile web add github:endlessstary/dsh-emotion-recognition
 ```
 
 或者把 tgz 下到本地、填绝对路径：
 
 ```bash
-dsh plugin --profile web add D:/path/to/dsh-emotion-recognition-0.2.2.tgz
+dsh plugin --profile web add D:/path/to/dsh-emotion-recognition-0.2.9.tgz
 ```
 
 装完重启 DSH。设置页左列会出现「情绪记忆」。
@@ -104,6 +110,9 @@ dsh plugin --profile web add D:/path/to/dsh-emotion-recognition-0.2.2.tgz
 - `场合表` 按会话 id 写：新开一个会话要补一条，否则按 `默认场合`（陪伴）走。
 
 ## 想请人测评什么
+
+（现在是 **beta**：功能齐、但在别人机器上的表现只在我这儿验过。发现问题直接在本仓库开 issue，
+贴上 DSH 版本、系统、和设置页「情绪」那栏的截图就行。）
 
 1. 判定准不准：同一轮对话，「客观」判的情绪和你自己的感受差多少（看「记录」页签的流水）。
 2. 主观 vs 客观：两栏摆在一起，哪边更贴近当事人。
