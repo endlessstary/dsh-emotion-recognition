@@ -494,7 +494,7 @@ window.__ModuleLoader__.load({
         : ''
       const 主观页 = h('div', {},
         h('div', { 'data-em-hero': '', style: 卡面(主观高们, st && st.配置) || undefined },
-          h('div', { 'data-em-big': '' }, 她词.length ? String(她词[0]) : '还没打分'),
+          h('div', { 'data-em-big': '' }, (自 && 自.标题) || (她词.length ? String(她词[0]) : '还没打分')),
           h('div', { 'data-em-sub': '' }, 她词.length
             ? ('她自己的主观评分（0~10，各算各的）：' + 她词.map((词) => 词 + ' ' + 她分[词]).join(' / '))
             : '她还没给自己打过分。用 emo_mood 写心情时带上 scores，这里就有了。'),
@@ -619,17 +619,17 @@ window.__ModuleLoader__.load({
       return h('div', {},
         h('div', { 'data-em-sec': '', style: { marginTop: 0 } },
           h('div', { 'data-em-h': '' }, '会话绑定'),
-          h('div', { 'data-em-note': '' }, '绑全部会话，或只绑指定的几个。绑定时只有这些会话会注入、判定、写记忆；每张卡片右边的导出各自生成一份文件。',
+          h('div', { 'data-em-note': '' }, '绑定所有会话，或只绑指定的会话。只有绑定的会话会注入、判定与记录记忆；每张卡片右边的导出可各自生成一份文件',
           h('div', { 'data-em-note': '' }, '当前状态：模式 ' + (配.绑定模式 || '全部') + '　会话 ' + 会话.length + ' 个　已勾选 ' + 绑.length + ' 个')),
           h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
-            h('span', {}, '绑全部会话'),
+            h('span', {}, '绑定所有会话'),
             h('input', { type: 'radio', name: 'em-bind', checked: 配.绑定模式 !== '指定', onChange: () => 存({ 绑定模式: '全部' }) })),
           h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
             h('span', {}, '只绑勾选的会话'),
             h('input', { type: 'radio', name: 'em-bind', checked: 配.绑定模式 === '指定', onChange: () => 存({ 绑定模式: '指定' }) })),
           ...(配.绑定模式 !== '指定'
             ? [
-              h('div', { key: 'all', 'data-em-note': '' }, '现在绑全部会话：所有会话都会注入、判定、写记忆。'),
+              h('div', { key: 'all', 'data-em-note': '' }, '现在绑定所有会话：所有会话都会注入、判定、记录记忆'),
               h('div', { key: 'allbtn', style: { marginTop: 6 } },
                 h('button', { 'data-em-btn': '', onClick: () => { window.open(API + '/export', '_blank') } }, '导出全部')),
             ]
