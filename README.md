@@ -63,7 +63,7 @@ dsh plugin --profile web add dsh-emotion-recognition
 
 ```bash
 # 2) 从 GitHub Release 装（指定版本）
-dsh plugin --profile web add https://github.com/endlessstary/dsh-emotion-recognition/releases/download/v0.2.9/dsh-emotion-recognition-0.2.9.tgz
+dsh plugin --profile web add https://github.com/endlessstary/dsh-emotion-recognition/releases/download/v0.2.10/dsh-emotion-recognition-0.2.10.tgz
 ```
 
 也可以直接从仓库装（跟 main 走，可能比 Release 新一点）：
@@ -75,7 +75,7 @@ dsh plugin --profile web add github:endlessstary/dsh-emotion-recognition
 或者把 tgz 下到本地、填绝对路径：
 
 ```bash
-dsh plugin --profile web add D:/path/to/dsh-emotion-recognition-0.2.9.tgz
+dsh plugin --profile web add D:/path/to/dsh-emotion-recognition-0.2.10.tgz
 ```
 
 装完重启 DSH。设置页左列会出现「情绪记忆」。
