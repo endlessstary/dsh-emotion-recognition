@@ -126,6 +126,24 @@ window.__ModuleLoader__.load({
 [data-em-num]{width:88px;padding:4px 8px;border-radius:7px;border:1px solid rgba(127,127,127,.3);background:transparent;color:inherit;font-size:12px;text-align:right;}
 [data-em-btn]{padding:5px 12px;border-radius:8px;border:1px solid rgba(127,127,127,.3);background:transparent;color:inherit;cursor:pointer;font-size:12px;}
 [data-em-quote]{font-size:12px;padding:6px 10px;border-left:2px solid rgba(127,127,127,.3);opacity:.85;}
+/* 关系条目的「翻面」：正面是名字+三条轴（和原来一模一样，框本身透明看不见），
+   点名字上下翻到背面（灰底），写着大肥鱼对这个人的认知与看法。正面高度不变，所以整页不会跳。 */
+[data-em-flip]{perspective:none;}   /* 不要透视：有透视的话翻转时上下边会一大一小，看着像斜着翻 */
+[data-em-flip-inner]{position:relative;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,.2,.2,1);}
+[data-em-flip][data-open] [data-em-flip-inner]{transform:rotateX(180deg);}
+[data-em-flip-front],[data-em-flip-back]{backface-visibility:hidden;-webkit-backface-visibility:hidden;}
+[data-em-flip-back]{position:absolute;inset:0;transform:rotateX(180deg);border-radius:10px;cursor:pointer;
+  background:rgba(120,120,120,.16);padding:10px 12px;overflow:auto;font-size:13px;line-height:1.7;white-space:pre-wrap;
+  display:flex;flex-direction:column;gap:4px;}
+/* 搜索跳到某人时：留一点上边距（免得被贴顶的搜索栏挡住），并亮一下那一条 */
+/* 搜索栏（【关系】和【记忆】共用）：贴顶不动，输入框自己带一层半透明模糊，
+   外面不再加底色/圆角——这样两条都还是原来那个白底细框的样子，只是背后会被糊掉。
+   注意：sticky 只在**够高的父容器**里才粘得住，所以【记忆】那边把表头、搜索栏、列表放进同一个 sec。 */
+[data-em-searchbar]{position:sticky;top:0;z-index:6;padding:2px 0;}
+[data-em-searchbar] > input[data-em-input]{width:100%;box-sizing:border-box;
+  background:rgba(255,255,255,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+[data-em-flip]{scroll-margin-top:64px;transition:outline-color .25s;}
+[data-em-flip][data-lit]{outline:2px solid rgba(90,140,255,.55);outline-offset:6px;border-radius:12px;}
 `
 
     const 取 = (p) => fetch(API + p).then((r) => r.json())
@@ -172,6 +190,9 @@ window.__ModuleLoader__.load({
     function 关系页(props) {
       const st = props.st || {}
       const 条 = st.关系 || []
+      const [开, set开] = React.useState('')   // 点开了谁（一次只开一个）
+      const [搜, set搜] = React.useState('')   // 搜索框里的字
+      const [亮, set亮] = React.useState('')   // 刚跳过去的那条，亮一下再灭
       const 百分 = (v) => Math.round(Number(v) * 100)
       // 名字的颜色跟着「最高的那条轴」走：亲/信 用渐变（会流动）；
       // 敌 用「已经解开的那几格」拼成的渐变（52% = 前三格，25% = 前两格）。
@@ -207,37 +228,89 @@ window.__ModuleLoader__.load({
         if (轴 === '敌') { const n = Math.min(6, Math.max(1, Math.ceil(值 / 100 * 6))); return 敌档[n - 1] }
         return 'rgba(127,127,127,.5)'
       }
-      const 名字盒 = (r) => {
+      const 名字盒 = (r, 开, 点) => {
         const [轴, 值] = 最高轴(r)
-        return h('span', { 'data-name-box': 轴 || '', style: { backgroundColor: 框色[轴] || 'rgba(127,127,127,.18)', borderColor: 轴 === '敌' ? 边色(轴, 值) : undefined } },
-          h('span', 名字样式(r), (r.显示 || r.名) + (r.昵称 ? ' (' + r.名 + ')' : '')))
+        return h('span', {
+          'data-name-box': 轴 || '',
+          onClick: 点,
+          title: r.看法 ? '点开看我对这个人的看法' : '点开看详情',
+          style: { backgroundColor: 框色[轴] || 'rgba(127,127,127,.18)', borderColor: 轴 === '敌' ? 边色(轴, 值) : undefined, cursor: 'pointer' },
+        },
+          h('span', 名字样式(r), (r.显示 || r.名) + (r.括号 && r.括号 !== (r.显示 || r.名) ? ' (' + r.括号 + ')' : '')))
       }
+      // 搜人：按名字 / 昵称 / 显示名找，找到就滚到那条（带一点高亮，免得看不见滚到哪了）
+      const 搜的人 = (q) => {
+        const s = String(q || '').trim().toLowerCase()
+        if (!s) return -1
+        return 条.findIndex((r) => [r.名, r.昵称, r.显示].some((x) => String(x || '').toLowerCase().includes(s)))
+      }
+      React.useEffect(() => {
+        const i = 搜的人(搜)
+        if (i < 0) return
+        try {
+          const el = document.querySelector('[data-rel-idx="' + i + '"]')
+          if (el && el.scrollIntoView) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            set亮(条[i].名)
+          }
+        } catch { /* 滚不动就算了 */ }
+      }, [搜])
+      React.useEffect(() => {
+        if (!亮) return
+        const t = setTimeout(() => set亮(''), 1600)
+        return () => clearTimeout(t)
+      }, [亮])
       // 一条轴 = 名字在左上、分数在右上、条子在下（和「心情」的 14 条一个样子）
       const 轴行 = (key, 名, 值, 条子) => h('div', { key, style: { display: 'flex', flexDirection: 'column', gap: 4 } },
         h('div', { 'data-em-row': '' }, h('span', {}, 名), h('span', {}, 百分(值) + '%')),
         条子)
       return h('div', { 'data-em-sec': '', style: { marginTop: 0 } },
+        // 搜索栏：贴在顶上，往下滚也不动（和【记忆】那条同一个外形）
+        h('div', { 'data-em-searchbar': '' },
+          h('input', {
+            'data-em-input': '',
+            type: 'search',
+            placeholder: '搜关键词：名字或昵称',
+            value: 搜,
+            onChange: (e) => set搜(e.target.value),
+          })),
         h('div', { 'data-em-hero': '' },
           h('div', { 'data-em-big': '' }, '关系列表'),
           h('div', { 'data-em-note': '' }, '「关系」默认为全局模式'),
           h('div', { 'data-em-note': '' }, '「关系」分为三条轴，亲近、敌视与信任，前两轴之间的关联度可调，信任轴则完全独立'),
           h('div', { 'data-em-note': '' }, '此为判定分寸之参考，而非令大肥鱼演戏')),
         ...(条.length
-          ? 条.map((r) => h('div', { key: r.名, style: { display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 } },
-            h('div', { 'data-em-meta': '', style: { marginBottom: 2 } },
-              名字盒(r),              r.听闻 ? h('span', {}, '听闻') : (r.最近 ? h('span', {}, 多久前(r.最近)) : null)),
-            轴行('亲', '亲近', r.亲,
-              h('div', { 'data-em-bar': 'rel' },
-                h('div', { 'data-em-fill': '', 'data-axis': '亲', 'data-hot': 百分(r.亲) >= 71 ? '' : undefined, style: { width: (百分(r.亲) <= 0 ? 0 : Math.max(2, 百分(r.亲))) + '%' } },
-                  h('span', { 'data-em-wisp': '' })))),
-            轴行('敌', '敌视', r.敌,
-              h('div', { 'data-em-bar': 'rel' },
-                h('div', { 'data-em-fill': '', 'data-axis': '敌', style: (() => { const v = Math.max(2, 百分(r.敌)); return { width: (百分(r.敌) <= 0 ? 0 : v) + '%', '--w': v } })() },
-                  h('span', { 'data-em-goo': '' })))),
-            轴行('信', '信任', r.信,
-              h('div', { 'data-em-bar': 'rel' },
-                h('div', { 'data-em-fill': '', 'data-axis': '信', style: (() => { const v = Math.max(2, 百分(r.信)); return { width: (百分(r.信) <= 0 ? 0 : v) + '%', '--w': v } })() },
-                  h('span', { 'data-em-sheen': '' }))))))
+          ? 条.map((r, i) => {
+            const 开这条 = 开 === r.名
+            return h('div', { key: r.名, 'data-em-flip': '', 'data-rel-idx': i, 'data-open': 开这条 ? '' : undefined, 'data-lit': 亮 === r.名 ? '' : undefined, style: { marginTop: 12 } },
+              h('div', { 'data-em-flip-inner': '' },
+                h('div', { 'data-em-flip-front': '', style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+                  h('div', { 'data-em-meta': '', style: { marginBottom: 2 } },
+                    名字盒(r, 开这条, () => set开(开这条 ? '' : r.名)),
+                    r.听闻 ? h('span', {}, '听闻') : (r.最近 ? h('span', {}, 多久前(r.最近)) : null)),
+                  轴行('亲', '亲近', r.亲,
+                    h('div', { 'data-em-bar': 'rel' },
+                      h('div', { 'data-em-fill': '', 'data-axis': '亲', 'data-hot': 百分(r.亲) >= 71 ? '' : undefined, style: { width: (百分(r.亲) <= 0 ? 0 : Math.max(2, 百分(r.亲))) + '%' } },
+                        h('span', { 'data-em-wisp': '' })))),
+                  轴行('敌', '敌视', r.敌,
+                    h('div', { 'data-em-bar': 'rel' },
+                      h('div', { 'data-em-fill': '', 'data-axis': '敌', style: (() => { const v = Math.max(2, 百分(r.敌)); return { width: (百分(r.敌) <= 0 ? 0 : v) + '%', '--w': v } })() },
+                        h('span', { 'data-em-goo': '' })))),
+                  轴行('信', '信任', r.信,
+                    h('div', { 'data-em-bar': 'rel' },
+                      h('div', { 'data-em-fill': '', 'data-axis': '信', style: (() => { const v = Math.max(2, 百分(r.信)); return { width: (百分(r.信) <= 0 ? 0 : v) + '%', '--w': v } })() },
+                        h('span', { 'data-em-sheen': '' }))))),
+                h('div', { 'data-em-flip-back': '', onClick: () => set开('') },
+                  h('div', { style: { fontSize: 11, letterSpacing: '.04em', opacity: 0.55 } }, '我对' + (r.显示 || r.名) + '的认知与看法'),
+                  h('div', {}, r.看法 || '（还没写过）'),
+                  r.全名 && r.全名 !== r.名 ? h('div', { style: { fontSize: 11, opacity: 0.5 } }, '她自己认可的名字：' + r.全名) : null,
+                  r.账号 && r.账号.length ? h('div', { style: { fontSize: 11, opacity: 0.5 } }, '账号：' + r.账号.join('、'))
+                    : (r.名 && r.名 !== (r.显示 || '') ? h('div', { style: { fontSize: 11, opacity: 0.5 } }, '账号：' + r.名) : null),
+                  r.看法于 ? h('div', { style: { fontSize: 11, opacity: 0.5 } }, '上次写的：' + 多久前(r.看法于)) : null,
+                  r.备注 ? h('div', { style: { fontSize: 11, opacity: 0.5 } }, '备注：' + r.备注) : null,
+                  r.听闻 ? h('div', { style: { fontSize: 11, opacity: 0.5 } }, '还没打过交道，只是听人说起过') : null,
+                  h('div', { style: { fontSize: 11, opacity: 0.4, marginTop: 'auto' } }, '点一下翻回正面'))))
+          })
           : [h('div', { 'data-em-note': '' }, '还没记下谁 —— 聊几轮就有了')]))
     }
 
@@ -570,14 +643,15 @@ window.__ModuleLoader__.load({
       }
       React.useEffect(() => { if (props.会话) 拉(0, '', true) }, [props.会话])
       return h('div', {},
+        // 表头、搜索栏、列表放在同一个 sec 里：这样搜索栏的 sticky 才有够高的容器可粘
         h('div', { 'data-em-sec': '', style: { marginTop: 0 } },
           h('div', { 'data-em-h': '' }, '记忆（共 ' + 总 + ' 条）'),
-          h('input', {
-            'data-em-input': '', style: { width: '100%' }, placeholder: '搜关键词，回车', value: q,
-            onChange: (e) => setQ(e.target.value),
-            onKeyDown: (e) => { if (e.key === 'Enter') 拉(0, e.target.value, true) },
-          })),
-        h('div', { 'data-em-sec': '' },
+          h('div', { 'data-em-searchbar': '' },
+            h('input', {
+              'data-em-input': '', style: { width: '100%' }, placeholder: '搜关键词', value: q,
+              onChange: (e) => setQ(e.target.value),
+              onKeyDown: (e) => { if (e.key === 'Enter') 拉(0, e.target.value, true) },
+            })),
           ...条.map((m) => h('div', { key: m.id, 'data-em-card': '' },
             h('div', {}, m.text),
             h('div', { 'data-em-meta': '' },
@@ -706,6 +780,10 @@ window.__ModuleLoader__.load({
             h('span', {}, '注入里说「旁人看得出什么」'),
             h('input', { type: 'checkbox', checked: 配.掩饰层 !== false, onChange: (e) => 存({ 掩饰层: e.target.checked }) })),
           h('div', { 'data-em-note': '' }, '关掉：注入里只写「内心」是什么；开着会多一句「显露于外的许是…」，只是描述，不是要她演。'),
+          h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
+            h('span', {}, '首次引导（第一次注入时介绍用法）'),
+            h('input', { type: 'checkbox', checked: 配.首次引导 !== false, onChange: (e) => 存({ 首次引导: e.target.checked }) })),
+          h('div', { 'data-em-note': '' }, '每个会话只在第一轮注入一次：说明上面那行是插件判的、六个工具各管什么，并建议先问用户「你希望我怎么称呼你」。查过全名/叫法之后就不再提这一句。'),
           h('label', { 'data-em-row': '', style: { cursor: 'pointer' } },
             h('span', {}, '关系账（按人记暖度）'),
             h('input', { type: 'checkbox', checked: 配.关系账 !== false, onChange: (e) => 存({ 关系账: e.target.checked }) })),
